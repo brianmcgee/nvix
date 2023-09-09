@@ -1,8 +1,5 @@
 {lib, ...}: {
-  perSystem = {
-    pkgs,
-    ...
-  }: let
+  perSystem = {pkgs, ...}: let
     config = pkgs.writeTextFile {
       name = "nats.conf";
       text = ''
@@ -40,25 +37,43 @@
             initial_delay_seconds = 2;
           };
         };
-        nits-setup = {
-          depends_on = {
-            nats-server.condition = "process_started";
-          };
-          environment = {
-            # ensures contexts are generated in the .data directory
-            XDG_CONFIG_HOME = "$PRJ_DATA_DIR";
-          };
-          command = pkgs.writeShellApplication {
-            name = "nats-setup";
-            runtimeInputs = [pkgs.jq];
-            text = ''
+      };
+    };
 
+    config.devshells.default = {
+      devshell.startup = {
+        setup-nats.text = ''
+          set -euo pipefail
 
+          # we only setup the data dir if it doesn't exist
+          # to refresh simply delete the directory and run `direnv reload`
+          [ -d $NSC_HOME ] && exit 0
 
+          mkdir -p $NSC_HOME
 
-            '';
-          };
-        };
+          # initialise nsc state
+
+          nsc init -n Tvix --dir $NSC_HOME
+          nsc edit operator \
+              --service-url nats://localhost:4222 \
+              --account-jwt-server-url nats://localhost:4222
+
+          # setup server config
+
+          mkdir -p $NATS_HOME
+          cp ${config} "$NATS_HOME/nats.conf"
+          nsc generate config --nats-resolver --config-file "$NATS_HOME/auth.conf"
+
+          nsc add account -n Store
+          nsc edit account -n Store \
+              --js-mem-storage -1 \
+              --js-disk-storage -1 \
+              --js-streams -1 \
+              --js-consumer -1
+
+          nsc add user -a Store -n Admin
+          nsc add user -a Store -n Server
+        '';
       };
     };
 
