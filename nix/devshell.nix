@@ -73,6 +73,10 @@
           category = "development";
           package = pkgs.enumer;
         }
+        {
+          category = "development";
+          package = pkgs.evans;
+        }
       ];
     };
   };

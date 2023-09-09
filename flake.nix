@@ -27,10 +27,7 @@
     process-compose-flake.url = "github:Platonic-Systems/process-compose-flake";
   };
 
-  outputs = inputs @ {
-    flake-parts,
-    ...
-  }:
+  outputs = inputs @ {flake-parts, ...}:
     flake-parts.lib.mkFlake
     {
       inherit inputs;
