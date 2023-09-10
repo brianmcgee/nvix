@@ -5,7 +5,6 @@ import (
 	pb "code.tvl.fyi/tvix/store/protos"
 	"context"
 	"encoding/base64"
-	"fmt"
 	"github.com/charmbracelet/log"
 	"github.com/jotfs/fastcdc-go"
 	"github.com/juju/errors"
@@ -20,8 +19,8 @@ import (
 var (
 	ChunkOptions = fastcdc.Options{
 		MinSize:     128 * 1024,
-		AverageSize: 256 * 1024,
-		MaxSize:     512 * 1024,
+		AverageSize: 512 * 1024,
+		MaxSize:     1023 * 1024, // we allow 1kb for headers to avoid the default 1MB max message size
 	}
 )
 
@@ -72,39 +71,37 @@ func (b *blobService) Read(request *pb.ReadBlobRequest, server pb.BlobService_Re
 		return status.Error(codes.Internal, "internal error")
 	}
 
-	id := base64.StdEncoding.EncodeToString(request.Digest)
-	subject := fmt.Sprintf("TVIX.STORE.BLOB.%s", id)
+	subject := BlobSubjectForDigest(request.Digest)
 
-	sub, err := js.SubscribeSync(subject, nats.DeliverAll())
-	if err != nil {
+	blobMsg, err := js.GetLastMsg("blobs", subject)
+	if err == nats.ErrMsgNotFound {
+		return status.Error(codes.NotFound, "blob not found")
+	} else if err != nil {
+		log.Errorf("failed to retrieve blob: %v", subject)
 		return status.Error(codes.Internal, "internal error")
 	}
 
+	chunkDigest := make([]byte, 32)
+	chunkDigestReader := bytes.NewReader(blobMsg.Data)
+
 	for {
-		msg, err := sub.NextMsgWithContext(server.Context())
-		if err != nil {
-			log.Errorf("failed to get next chunk: %v", err)
+		n, err := chunkDigestReader.Read(chunkDigest)
+		if err == io.EOF {
+			break
+		} else if n != 32 {
+			log.Errorf("malformed blob data, expected 32 bytes but read %v", n)
+			return status.Error(codes.Internal, "internal error")
 		}
 
-		chunkId := string(msg.Data)
-		chunkMsg, err := js.GetLastMsg("chunks", ChunkSubject(chunkId))
+		chunkMsg, err := js.GetLastMsg("chunks", ChunkSubjectForDigest(chunkDigest))
 		if err == nats.ErrMsgNotFound {
-			return status.Errorf(codes.NotFound, "chunk not found: %v", chunkId)
+			return status.Errorf(codes.NotFound, "chunk not found: %v", base64.StdEncoding.EncodeToString(chunkDigest))
 		}
 		if err = server.Send(&pb.BlobChunk{
 			Data: chunkMsg.Data,
 		}); err != nil {
 			log.Errorf("failed to send blob chunk to client: %v", err)
 			return err
-		}
-
-		meta, err := msg.Metadata()
-		if err != nil {
-			log.Errorf("failed to retrieve message metadata: %v", err)
-			return status.Error(codes.Internal, "internal error")
-		} else if meta.NumPending == 0 {
-			// we have finished reading all the chunks
-			break
 		}
 	}
 
@@ -115,7 +112,7 @@ func (b *blobService) Put(server pb.BlobService_PutServer) (err error) {
 	allReader, allWriter := io.Pipe()
 	chunkReader, chunkWriter := io.Pipe()
 
-	var chunkIds []string
+	var chunkDigests []byte
 	var blobDigest []byte
 
 	multiWriter := io.MultiWriter(allWriter, chunkWriter)
@@ -184,8 +181,8 @@ func (b *blobService) Put(server pb.BlobService_PutServer) (err error) {
 				return nil
 			}
 
-			digest := hasher.Sum(nil)
-			chunkId := base64.StdEncoding.EncodeToString(digest)
+			chunkDigest := hasher.Sum(nil)
+			chunkId := base64.StdEncoding.EncodeToString(chunkDigest)
 
 			subject := ChunkSubject(chunkId)
 			msg := nats.NewMsg(subject)
@@ -196,7 +193,7 @@ func (b *blobService) Put(server pb.BlobService_PutServer) (err error) {
 				return errors.Annotate(err, "failed to publish chunk into NATS")
 			}
 
-			chunkIds = append(chunkIds, chunkId)
+			chunkDigests = append(chunkDigests, chunkDigest...)
 			hasher.Reset()
 		}
 	})
@@ -228,17 +225,17 @@ func (b *blobService) Put(server pb.BlobService_PutServer) (err error) {
 
 	id := base64.StdEncoding.EncodeToString(blobDigest)
 
-	for _, chunkId := range chunkIds {
-		_, err := js.PublishAsync(BlobSubject(id), []byte(chunkId))
-		if err != nil {
-			log.Errorf("failed to publish chunk id: %v", err)
-			return status.Error(codes.Internal, "internal error")
-		}
+	msg := nats.NewMsg(BlobSubject(id))
+	msg.Header.Set(nats.MsgRollup, nats.MsgRollupSubject)
+	msg.Data = chunkDigests
+
+	_, err = js.PublishMsg(msg)
+	if err != nil {
+		log.Errorf("failed to publish chunk, id: %v", err)
+		return status.Error(codes.Internal, "internal error")
 	}
 
-	<-js.PublishAsyncComplete()
-
-	log.Debug("put complete", "id", id, "chunks", len(chunkIds))
+	log.Debug("put complete", "id", msg.Subject, "chunks", len(chunkDigests))
 
 	return server.SendAndClose(&pb.PutBlobResponse{
 		Digest: blobDigest,
