@@ -57,7 +57,6 @@ func NewBlobService(conn *nats.Conn) (pb.BlobServiceServer, error) {
 
 type blobService struct {
 	pb.UnimplementedBlobServiceServer
-
 	conn *nats.Conn
 }
 
@@ -88,7 +87,7 @@ func (b *blobService) Read(request *pb.ReadBlobRequest, server pb.BlobService_Re
 		}
 
 		chunkId := string(msg.Data)
-		chunkMsg, err := js.GetLastMsg("chunks", fmt.Sprintf("TVIX.STORE.CHUNK.%s", chunkId))
+		chunkMsg, err := js.GetLastMsg("chunks", ChunkSubject(chunkId))
 		if err == nats.ErrMsgNotFound {
 			return status.Errorf(codes.NotFound, "chunk not found: %v", chunkId)
 		}
@@ -188,7 +187,7 @@ func (b *blobService) Put(server pb.BlobService_PutServer) (err error) {
 			digest := hasher.Sum(nil)
 			chunkId := base64.StdEncoding.EncodeToString(digest)
 
-			subject := fmt.Sprintf("TVIX.STORE.CHUNK.%s", chunkId)
+			subject := ChunkSubject(chunkId)
 			msg := nats.NewMsg(subject)
 			msg.Header.Set(nats.MsgRollup, nats.MsgRollupSubject)
 			msg.Data = chunk.Data
@@ -228,10 +227,9 @@ func (b *blobService) Put(server pb.BlobService_PutServer) (err error) {
 	}
 
 	id := base64.StdEncoding.EncodeToString(blobDigest)
-	subject := fmt.Sprintf("TVIX.STORE.BLOB.%s", id)
 
 	for _, chunkId := range chunkIds {
-		_, err := js.PublishAsync(subject, []byte(chunkId))
+		_, err := js.PublishAsync(BlobSubject(id), []byte(chunkId))
 		if err != nil {
 			log.Errorf("failed to publish chunk id: %v", err)
 			return status.Error(codes.Internal, "internal error")
