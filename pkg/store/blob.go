@@ -18,9 +18,9 @@ import (
 
 var (
 	ChunkOptions = fastcdc.Options{
-		MinSize:     128 * 1024,
-		AverageSize: 512 * 1024,
-		MaxSize:     1023 * 1024, // we allow 1kb for headers to avoid the default 1MB max message size
+		MinSize:     4 * 1024 * 1024,
+		AverageSize: 6 * 1024 * 1024,
+		MaxSize:     (8 * 1024 * 1024) - 1024, // we allow 1kb for headers to avoid max message size
 	}
 )
 
@@ -84,6 +84,9 @@ func (b *blobService) Read(request *pb.ReadBlobRequest, server pb.BlobService_Re
 	chunkDigest := make([]byte, 32)
 	chunkDigestReader := bytes.NewReader(blobMsg.Data)
 
+	// we want to stay just under the 4MB max size restriction in gRPC
+	sendBuf := make([]byte, (4*1024*1024)-1024)
+
 	for {
 		n, err := chunkDigestReader.Read(chunkDigest)
 		if err == io.EOF {
@@ -97,12 +100,25 @@ func (b *blobService) Read(request *pb.ReadBlobRequest, server pb.BlobService_Re
 		if err == nats.ErrMsgNotFound {
 			return status.Errorf(codes.NotFound, "chunk not found: %v", base64.StdEncoding.EncodeToString(chunkDigest))
 		}
-		if err = server.Send(&pb.BlobChunk{
-			Data: chunkMsg.Data,
-		}); err != nil {
-			log.Errorf("failed to send blob chunk to client: %v", err)
-			return err
+
+		reader := bytes.NewReader(chunkMsg.Data)
+		for {
+			n, err := reader.Read(sendBuf)
+			if err == io.EOF {
+				break
+			} else if err != nil {
+				log.Errorf("failed to read next send chunk: %v", err)
+				return status.Error(codes.Internal, "internal error")
+			}
+
+			if err = server.Send(&pb.BlobChunk{
+				Data: sendBuf[:n],
+			}); err != nil {
+				log.Errorf("failed to send blob chunk to client: %v", err)
+				return err
+			}
 		}
+
 	}
 
 	return nil

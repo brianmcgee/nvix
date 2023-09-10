@@ -48,6 +48,7 @@ func runBasicJetStreamServer(t *testing.T) *server.Server {
 	opts.Port = -1
 	opts.JetStream = true
 	opts.Debug = true
+	opts.MaxPayload = 8 * 1024 * 1024
 	srv := test.RunServer(&opts)
 	srv.SetLoggerV2(&logAdapter{}, opts.Debug, opts.Trace, false)
 	return srv
