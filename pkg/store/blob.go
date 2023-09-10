@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/base64"
 	"github.com/charmbracelet/log"
+	"github.com/golang/protobuf/proto"
 	"github.com/jotfs/fastcdc-go"
 	"github.com/juju/errors"
 	"github.com/nats-io/nats.go"
@@ -59,9 +60,34 @@ type blobService struct {
 	conn *nats.Conn
 }
 
+func (b *blobService) getBlobMeta(ctx context.Context, js nats.JetStreamContext, digest []byte) (*pb.BlobMeta, error) {
+	subject := BlobSubjectForDigest(digest)
+
+	blobMsg, err := js.GetLastMsg("blobs", subject)
+	if err == nats.ErrMsgNotFound {
+		return nil, status.Error(codes.NotFound, "blob not found")
+	} else if err != nil {
+		log.Debugf("failed to retrieve blob: %v", subject)
+		return nil, status.Error(codes.Internal, "internal error")
+	}
+
+	blobMeta := pb.BlobMeta{}
+	if err = proto.Unmarshal(blobMsg.Data, &blobMeta); err != nil {
+		log.Errorf("failed to unmarshal blob meta: %v", err)
+		return nil, status.Error(codes.Internal, "internal error")
+	}
+
+	return &blobMeta, nil
+}
+
 func (b *blobService) Stat(ctx context.Context, request *pb.StatBlobRequest) (*pb.BlobMeta, error) {
-	// TODO implement me
-	panic("implement me")
+	js, err := b.conn.JetStream()
+	if err != nil {
+		log.Errorf("failed to create a JetStream context: %v", err)
+		return nil, status.Error(codes.Internal, "internal error")
+	}
+
+	return b.getBlobMeta(ctx, js, request.Digest)
 }
 
 func (b *blobService) Read(request *pb.ReadBlobRequest, server pb.BlobService_ReadServer) error {
@@ -71,34 +97,18 @@ func (b *blobService) Read(request *pb.ReadBlobRequest, server pb.BlobService_Re
 		return status.Error(codes.Internal, "internal error")
 	}
 
-	subject := BlobSubjectForDigest(request.Digest)
-
-	blobMsg, err := js.GetLastMsg("blobs", subject)
-	if err == nats.ErrMsgNotFound {
-		return status.Error(codes.NotFound, "blob not found")
-	} else if err != nil {
-		log.Errorf("failed to retrieve blob: %v", subject)
-		return status.Error(codes.Internal, "internal error")
+	meta, err := b.getBlobMeta(server.Context(), js, request.Digest)
+	if err != nil {
+		return err
 	}
-
-	chunkDigest := make([]byte, 32)
-	chunkDigestReader := bytes.NewReader(blobMsg.Data)
 
 	// we want to stay just under the 4MB max size restriction in gRPC
 	sendBuf := make([]byte, (4*1024*1024)-1024)
 
-	for {
-		n, err := chunkDigestReader.Read(chunkDigest)
-		if err == io.EOF {
-			break
-		} else if n != 32 {
-			log.Errorf("malformed blob data, expected 32 bytes but read %v", n)
-			return status.Error(codes.Internal, "internal error")
-		}
-
-		chunkMsg, err := js.GetLastMsg("chunks", ChunkSubjectForDigest(chunkDigest))
+	for _, chunk := range meta.Chunks {
+		chunkMsg, err := js.GetLastMsg("chunks", ChunkSubjectForDigest(chunk.Digest))
 		if err == nats.ErrMsgNotFound {
-			return status.Errorf(codes.NotFound, "chunk not found: %v", base64.StdEncoding.EncodeToString(chunkDigest))
+			return status.Errorf(codes.NotFound, "chunk not found: %v", base64.StdEncoding.EncodeToString(chunk.Digest))
 		}
 
 		reader := bytes.NewReader(chunkMsg.Data)
@@ -118,7 +128,6 @@ func (b *blobService) Read(request *pb.ReadBlobRequest, server pb.BlobService_Re
 				return err
 			}
 		}
-
 	}
 
 	return nil
@@ -128,8 +137,8 @@ func (b *blobService) Put(server pb.BlobService_PutServer) (err error) {
 	allReader, allWriter := io.Pipe()
 	chunkReader, chunkWriter := io.Pipe()
 
-	var chunkDigests []byte
 	var blobDigest []byte
+	blobMeta := pb.BlobMeta{}
 
 	multiWriter := io.MultiWriter(allWriter, chunkWriter)
 
@@ -209,7 +218,11 @@ func (b *blobService) Put(server pb.BlobService_PutServer) (err error) {
 				return errors.Annotate(err, "failed to publish chunk into NATS")
 			}
 
-			chunkDigests = append(chunkDigests, chunkDigest...)
+			blobMeta.Chunks = append(blobMeta.Chunks, &pb.BlobMeta_ChunkMeta{
+				Digest: chunkDigest,
+				Size:   uint32(len(chunk.Data)),
+			})
+
 			hasher.Reset()
 		}
 	})
@@ -243,7 +256,12 @@ func (b *blobService) Put(server pb.BlobService_PutServer) (err error) {
 
 	msg := nats.NewMsg(BlobSubject(id))
 	msg.Header.Set(nats.MsgRollup, nats.MsgRollupSubject)
-	msg.Data = chunkDigests
+	msg.Data, err = proto.Marshal(&blobMeta)
+
+	if err != nil {
+		log.Errorf("failed to marshal blob meta: %v", err)
+		return status.Error(codes.Internal, "internal error")
+	}
 
 	_, err = js.PublishMsg(msg)
 	if err != nil {
@@ -251,7 +269,7 @@ func (b *blobService) Put(server pb.BlobService_PutServer) (err error) {
 		return status.Error(codes.Internal, "internal error")
 	}
 
-	log.Debug("put complete", "id", msg.Subject, "chunks", len(chunkDigests))
+	log.Debug("put complete", "id", msg.Subject, "chunks", len(blobMeta.Chunks))
 
 	return server.SendAndClose(&pb.PutBlobResponse{
 		Digest: blobDigest,
