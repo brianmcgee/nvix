@@ -24,7 +24,7 @@ func blobServer(s *server.Server, t *testing.T) (*grpc.Server, *bufconn.Listener
 	srv := grpc.NewServer()
 	pb.RegisterBlobServiceServer(srv, blobService)
 
-	buffer := 101024 * 1024
+	buffer := 10 * 1024 * 1024
 	lis := bufconn.Listen(buffer)
 
 	go func() {
@@ -52,7 +52,8 @@ func TestBlobService_Put(t *testing.T) {
 		t.Fatalf("failed to generate random bytes: %v", err)
 	}
 
-	resp, err := putBlob(blobClient, bytes.NewReader(payload), 2*1024*1024, t)
+	chunkSize := (4 * 1024 * 1024) - 1024 // stay just under 4MB grpc limit
+	resp, err := putBlob(blobClient, bytes.NewReader(payload), chunkSize, t)
 	if err != nil {
 		t.Fatalf("failed to received a response: %v", err)
 	}

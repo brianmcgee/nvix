@@ -109,7 +109,7 @@ func grpcConn(lis *bufconn.Listener, t *testing.T) *grpc.ClientConn {
 	return conn
 }
 
-func putBlob(c pb.BlobServiceClient, r io.Reader, chunkSize int32, t *testing.T) (*pb.PutBlobResponse, error) {
+func putBlob(c pb.BlobServiceClient, r io.Reader, chunkSize int, t *testing.T) (*pb.PutBlobResponse, error) {
 	t.Helper()
 
 	put, err := c.Put(context.Background())
