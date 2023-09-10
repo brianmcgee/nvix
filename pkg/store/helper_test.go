@@ -1,7 +1,15 @@
 package store
 
 import (
+	"bytes"
+	pb "code.tvl.fyi/tvix/store/protos"
+	"context"
 	"github.com/charmbracelet/log"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/test/bufconn"
+	"io"
+	"net"
 	"os"
 	"testing"
 	"time"
@@ -86,4 +94,67 @@ func shutdownJSServerAndRemoveStorage(t *testing.T, s *server.Server) {
 		}
 	}
 	s.WaitForShutdown()
+}
+
+func grpcConn(lis *bufconn.Listener, t *testing.T) *grpc.ClientConn {
+	t.Helper()
+	conn, err := grpc.Dial("",
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithContextDialer(func(ctx context.Context, s string) (net.Conn, error) {
+			return lis.Dial()
+		}))
+	if err != nil {
+		t.Fatalf("failed to create a grpc server connection: %v", err)
+	}
+	return conn
+}
+
+func putBlob(c pb.BlobServiceClient, r io.Reader, chunkSize int32, t *testing.T) (*pb.PutBlobResponse, error) {
+	t.Helper()
+
+	put, err := c.Put(context.Background())
+	if err != nil {
+		t.Fatalf("failed to create put: %v", err)
+	}
+
+	chunk := make([]byte, chunkSize)
+
+	for {
+		n, err := r.Read(chunk)
+		if err == io.EOF {
+			break
+		} else if err != nil {
+			t.Fatalf("failed to read chunk: %v", err)
+		}
+
+		if err = put.Send(&pb.BlobChunk{
+			Data: chunk[:n],
+		}); err != nil {
+			t.Fatalf("failed to send blob chunk: %v", err)
+		}
+	}
+
+	return put.CloseAndRecv()
+}
+
+func getBlob(c pb.BlobServiceClient, digest []byte, writer io.WriteCloser, t *testing.T) {
+	get, err := c.Read(context.Background(), &pb.ReadBlobRequest{Digest: digest})
+	if err != nil {
+		t.Fatalf("failed to open read request: %v", err)
+	}
+
+	for {
+		chunk, err := get.Recv()
+		if err == io.EOF {
+			if err = writer.Close(); err != nil {
+				log.Fatalf("failed to close writer: %v", err)
+			}
+			return
+		} else if err != nil {
+			t.Fatalf("failed to get next chunk: %v", err)
+		}
+		if _, err = io.Copy(writer, bytes.NewReader(chunk.Data)); err != nil {
+			t.Fatalf("failed to write chunk into read buffer: %v", err)
+		}
+	}
 }
