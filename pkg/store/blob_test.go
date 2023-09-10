@@ -37,9 +37,6 @@ func blobServer(s *server.Server, t *testing.T) (*grpc.Server, *bufconn.Listener
 }
 
 func TestBlobService_Put(t *testing.T) {
-
-	log.SetLevel(log.DebugLevel)
-
 	s := runBasicJetStreamServer(t)
 	defer shutdownJSServerAndRemoveStorage(t, s)
 
