@@ -4,7 +4,9 @@ go 1.20
 
 require (
 	code.tvl.fyi/tvix/store/protos v0.0.0-20230909121302-7b7aa6704a9d
+	github.com/alecthomas/kong v0.8.0
 	github.com/charmbracelet/log v0.2.4
+	github.com/golang/protobuf v1.5.2
 	github.com/jotfs/fastcdc-go v0.2.0
 	github.com/juju/errors v1.0.0
 	github.com/nats-io/nats-server/v2 v2.9.22
@@ -20,7 +22,6 @@ require (
 	github.com/charmbracelet/lipgloss v0.8.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/go-logfmt/logfmt v0.6.0 // indirect
-	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/klauspost/compress v1.16.7 // indirect
 	github.com/klauspost/cpuid/v2 v2.0.9 // indirect
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
@@ -34,6 +35,7 @@ require (
 	github.com/nats-io/nuid v1.0.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/rivo/uniseg v0.2.0 // indirect
+	github.com/ztrue/shutdown v0.1.1 // indirect
 	golang.org/x/crypto v0.12.0 // indirect
 	golang.org/x/net v0.10.0 // indirect
 	golang.org/x/sys v0.11.0 // indirect
