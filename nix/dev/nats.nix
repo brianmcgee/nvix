@@ -14,6 +14,9 @@
         ## Port for monitoring
         http_port: 8222
 
+        ## Increase max payload to 8MB
+        max_payload: 8388608
+
         ## Configuration map for JetStream.
         ## see: https://docs.nats.io/running-a-nats-service/configuration#jetstream
         jetstream {}
