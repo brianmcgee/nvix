@@ -27,7 +27,18 @@
           name = "DIRECTORY_SERVICE_ADDR";
           eval = "sled://$TVIX_HOME/store/directory";
         }
+        {
+          name = "TVIX_MOUNT_DIR";
+          eval = "$PRJ_DATA_DIR/mount";
+        }
       ];
+
+      devshell.startup = {
+        tvix-init.text = ''
+          mkdir -p "$TVIX_HOME"
+          mkdir -p "$TVIX_MOUNT_DIR"
+        '';
+      };
 
       commands = let
         category = "tvix";

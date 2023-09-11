@@ -58,6 +58,25 @@
     };
 
     config.devshells.default = {
+      env = [
+        {
+          name = "NATS_HOME";
+          eval = "$PRJ_DATA_DIR/nats";
+        }
+        {
+          name = "NSC_HOME";
+          eval = "$PRJ_DATA_DIR/nsc";
+        }
+        {
+          name = "NKEYS_PATH";
+          eval = "$NSC_HOME";
+        }
+        {
+          name = "NATS_JWT_DIR";
+          eval = "$PRJ_DATA_DIR/nats/jwt";
+        }
+      ];
+
       devshell.startup = {
         setup-nats.text = ''
           set -euo pipefail
@@ -92,27 +111,6 @@
           nsc add user -a Store -n Server
         '';
       };
-    };
-
-    config.devshells.default = {
-      env = [
-        {
-          name = "NATS_HOME";
-          eval = "$PRJ_DATA_DIR/nats";
-        }
-        {
-          name = "NSC_HOME";
-          eval = "$PRJ_DATA_DIR/nsc";
-        }
-        {
-          name = "NKEYS_PATH";
-          eval = "$NSC_HOME";
-        }
-        {
-          name = "NATS_JWT_DIR";
-          eval = "$PRJ_DATA_DIR/nats/jwt";
-        }
-      ];
 
       packages = [
         pkgs.nkeys
