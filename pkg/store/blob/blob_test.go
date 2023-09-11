@@ -1,4 +1,4 @@
-package store
+package blob
 
 import (
 	"bytes"
@@ -18,7 +18,7 @@ import (
 func blobServer(s *server.Server, t *testing.T) (*grpc.Server, *bufconn.Listener) {
 	t.Helper()
 
-	blobService, err := NewBlobService(natsConn(t, s))
+	blobService, err := NewService(natsConn(t, s))
 	if err != nil {
 		t.Fatalf("failed to create blob service: %v", err)
 	}

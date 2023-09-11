@@ -1,4 +1,4 @@
-package store
+package blob
 
 import (
 	"bytes"
@@ -26,7 +26,7 @@ var ChunkOptions = fastcdc.Options{
 	MaxSize:     (8 * 1024 * 1024) - 1024, // we allow 1kb for headers to avoid max message size
 }
 
-func NewBlobService(conn *nats.Conn) (pb.BlobServiceServer, error) {
+func NewService(conn *nats.Conn) (pb.BlobServiceServer, error) {
 	js, err := conn.JetStream()
 	if err != nil {
 		return nil, errors.Annotate(err, "failed to create a JetStream context")
@@ -50,17 +50,17 @@ func NewBlobService(conn *nats.Conn) (pb.BlobServiceServer, error) {
 		return nil, errors.Annotate(err, "failed to create chunks stream")
 	}
 
-	return &blobService{
+	return &service{
 		conn: conn,
 	}, nil
 }
 
-type blobService struct {
+type service struct {
 	pb.UnimplementedBlobServiceServer
 	conn *nats.Conn
 }
 
-func (b *blobService) getBlobMeta(ctx context.Context, js nats.JetStreamContext, digest []byte) (*pb.BlobMeta, error) {
+func (b *service) getBlobMeta(ctx context.Context, js nats.JetStreamContext, digest []byte) (*pb.BlobMeta, error) {
 	subject := BlobSubjectForDigest(digest)
 
 	blobMsg, err := js.GetLastMsg("blobs", subject)
@@ -80,7 +80,7 @@ func (b *blobService) getBlobMeta(ctx context.Context, js nats.JetStreamContext,
 	return &blobMeta, nil
 }
 
-func (b *blobService) Stat(ctx context.Context, request *pb.StatBlobRequest) (*pb.BlobMeta, error) {
+func (b *service) Stat(ctx context.Context, request *pb.StatBlobRequest) (*pb.BlobMeta, error) {
 	js, err := b.conn.JetStream()
 	if err != nil {
 		log.Errorf("failed to create a JetStream context: %v", err)
@@ -90,7 +90,7 @@ func (b *blobService) Stat(ctx context.Context, request *pb.StatBlobRequest) (*p
 	return b.getBlobMeta(ctx, js, request.Digest)
 }
 
-func (b *blobService) Read(request *pb.ReadBlobRequest, server pb.BlobService_ReadServer) error {
+func (b *service) Read(request *pb.ReadBlobRequest, server pb.BlobService_ReadServer) error {
 	js, err := b.conn.JetStream()
 	if err != nil {
 		log.Errorf("failed to create a JetStream context: %v", err)
@@ -133,7 +133,7 @@ func (b *blobService) Read(request *pb.ReadBlobRequest, server pb.BlobService_Re
 	return nil
 }
 
-func (b *blobService) Put(server pb.BlobService_PutServer) (err error) {
+func (b *service) Put(server pb.BlobService_PutServer) (err error) {
 	allReader, allWriter := io.Pipe()
 	chunkReader, chunkWriter := io.Pipe()
 

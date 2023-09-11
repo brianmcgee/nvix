@@ -4,8 +4,10 @@ import (
 	"net"
 	"syscall"
 
+	"github.com/brianmcgee/nvix/pkg/store/blob"
+
 	pb "code.tvl.fyi/tvix/store/protos"
-	"github.com/brianmcgee/nvix/pkg/store"
+
 	"github.com/charmbracelet/log"
 	"github.com/nats-io/nats.go"
 	"github.com/ztrue/shutdown"
@@ -28,7 +30,7 @@ func (r *Run) Run() error {
 		log.Fatalf("failed to connect to nats: %v", err)
 	}
 
-	service, err := store.NewBlobService(conn)
+	service, err := blob.NewService(conn)
 	if err != nil {
 		log.Fatalf("failed to create blob service")
 	}
