@@ -40,6 +40,20 @@
             initial_delay_seconds = 2;
           };
         };
+
+        nsc-push = {
+          depends_on = {
+            nats-server.condition = "process_started";
+          };
+          environment = {
+            XDG_CONFIG_HOME = "$PRJ_DATA_DIR";
+          };
+          command = pkgs.writeShellApplication {
+            name = "nsc-push";
+            runtimeInputs = [pkgs.nsc];
+            text = ''nsc push'';
+          };
+        };
       };
     };
 
