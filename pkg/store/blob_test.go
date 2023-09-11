@@ -2,15 +2,17 @@ package store
 
 import (
 	"bytes"
-	pb "code.tvl.fyi/tvix/store/protos"
 	"crypto/rand"
+	"io"
+	"testing"
+
+	pb "code.tvl.fyi/tvix/store/protos"
+
 	"github.com/charmbracelet/log"
 	"github.com/nats-io/nats-server/v2/server"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/test/bufconn"
-	"io"
-	"testing"
 )
 
 func blobServer(s *server.Server, t *testing.T) (*grpc.Server, *bufconn.Listener) {

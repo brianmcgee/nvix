@@ -2,17 +2,19 @@ package store
 
 import (
 	"bytes"
-	pb "code.tvl.fyi/tvix/store/protos"
 	"context"
-	"github.com/charmbracelet/log"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
-	"google.golang.org/grpc/test/bufconn"
 	"io"
 	"net"
 	"os"
 	"testing"
 	"time"
+
+	pb "code.tvl.fyi/tvix/store/protos"
+
+	"github.com/charmbracelet/log"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/test/bufconn"
 
 	"github.com/nats-io/nats-server/v2/server"
 	"github.com/nats-io/nats-server/v2/test"
@@ -23,8 +25,7 @@ const (
 	_EMPTY_ = ""
 )
 
-type logAdapter struct {
-}
+type logAdapter struct{}
 
 func (l *logAdapter) Noticef(format string, v ...interface{}) {
 	log.Infof(format, v...)

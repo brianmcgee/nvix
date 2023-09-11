@@ -2,9 +2,12 @@ package store
 
 import (
 	"bytes"
-	pb "code.tvl.fyi/tvix/store/protos"
 	"context"
 	"encoding/base64"
+	"io"
+
+	pb "code.tvl.fyi/tvix/store/protos"
+
 	"github.com/charmbracelet/log"
 	"github.com/golang/protobuf/proto"
 	"github.com/jotfs/fastcdc-go"
@@ -13,20 +16,17 @@ import (
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"io"
+
 	"lukechampine.com/blake3"
 )
 
-var (
-	ChunkOptions = fastcdc.Options{
-		MinSize:     4 * 1024 * 1024,
-		AverageSize: 6 * 1024 * 1024,
-		MaxSize:     (8 * 1024 * 1024) - 1024, // we allow 1kb for headers to avoid max message size
-	}
-)
+var ChunkOptions = fastcdc.Options{
+	MinSize:     4 * 1024 * 1024,
+	AverageSize: 6 * 1024 * 1024,
+	MaxSize:     (8 * 1024 * 1024) - 1024, // we allow 1kb for headers to avoid max message size
+}
 
 func NewBlobService(conn *nats.Conn) (pb.BlobServiceServer, error) {
-
 	js, err := conn.JetStream()
 	if err != nil {
 		return nil, errors.Annotate(err, "failed to create a JetStream context")
