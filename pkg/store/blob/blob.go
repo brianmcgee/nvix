@@ -6,6 +6,8 @@ import (
 	"encoding/base64"
 	"io"
 
+	"github.com/brianmcgee/nvix/pkg/store/subject"
+
 	pb "code.tvl.fyi/tvix/store/protos"
 
 	"github.com/charmbracelet/log"
@@ -34,7 +36,7 @@ func NewService(conn *nats.Conn) (pb.BlobServiceServer, error) {
 
 	if _, err := js.AddStream(&nats.StreamConfig{
 		Name:        "chunks",
-		Subjects:    []string{"TVIX.STORE.CHUNK.>"},
+		Subjects:    []string{subject.ChunkPrefix() + ".>"},
 		AllowRollup: true,
 		AllowDirect: true,
 	}); err != nil {
@@ -43,7 +45,7 @@ func NewService(conn *nats.Conn) (pb.BlobServiceServer, error) {
 
 	if _, err := js.AddStream(&nats.StreamConfig{
 		Name:        "blobs",
-		Subjects:    []string{"TVIX.STORE.BLOB.>"},
+		Subjects:    []string{subject.BlobPrefix() + ".>"},
 		AllowRollup: true,
 		AllowDirect: true,
 	}); err != nil {
@@ -61,13 +63,12 @@ type service struct {
 }
 
 func (b *service) getBlobMeta(ctx context.Context, js nats.JetStreamContext, digest []byte) (*pb.BlobMeta, error) {
-	subject := BlobSubjectForDigest(digest)
-
-	blobMsg, err := js.GetLastMsg("blobs", subject)
+	subj := subject.BlobByDigest(digest)
+	blobMsg, err := js.GetLastMsg("blobs", subj)
 	if err == nats.ErrMsgNotFound {
 		return nil, status.Error(codes.NotFound, "blob not found")
 	} else if err != nil {
-		log.Debugf("failed to retrieve blob: %v", subject)
+		log.Debugf("failed to retrieve blob: %v", subj)
 		return nil, status.Error(codes.Internal, "internal error")
 	}
 
@@ -106,7 +107,7 @@ func (b *service) Read(request *pb.ReadBlobRequest, server pb.BlobService_ReadSe
 	sendBuf := make([]byte, (4*1024*1024)-1024)
 
 	for _, chunk := range meta.Chunks {
-		chunkMsg, err := js.GetLastMsg("chunks", ChunkSubjectForDigest(chunk.Digest))
+		chunkMsg, err := js.GetLastMsg("chunks", subject.ChunkByDigest(chunk.Digest))
 		if err == nats.ErrMsgNotFound {
 			return status.Errorf(codes.NotFound, "chunk not found: %v", base64.StdEncoding.EncodeToString(chunk.Digest))
 		}
@@ -209,8 +210,7 @@ func (b *service) Put(server pb.BlobService_PutServer) (err error) {
 			chunkDigest := hasher.Sum(nil)
 			chunkId := base64.StdEncoding.EncodeToString(chunkDigest)
 
-			subject := ChunkSubject(chunkId)
-			msg := nats.NewMsg(subject)
+			msg := nats.NewMsg(subject.ChunkById(chunkId))
 			msg.Header.Set(nats.MsgRollup, nats.MsgRollupSubject)
 			msg.Data = chunk.Data
 
@@ -254,7 +254,7 @@ func (b *service) Put(server pb.BlobService_PutServer) (err error) {
 
 	id := base64.StdEncoding.EncodeToString(blobDigest)
 
-	msg := nats.NewMsg(BlobSubject(id))
+	msg := nats.NewMsg(subject.BlobById(id))
 	msg.Header.Set(nats.MsgRollup, nats.MsgRollupSubject)
 	msg.Data, err = proto.Marshal(&blobMeta)
 
