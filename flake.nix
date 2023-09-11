@@ -25,6 +25,10 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     process-compose-flake.url = "github:Platonic-Systems/process-compose-flake";
+    depot = {
+      url = "git+https://cl.tvl.fyi/depot";
+      flake = false;
+    };
   };
 
   outputs = inputs @ {flake-parts, ...}:

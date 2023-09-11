@@ -1,5 +1,21 @@
 {
   "nodes": {
+    "depot": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1694419930,
+        "narHash": "sha256-Co+38wEn6Gtve34u2QZ7nkX/3x5efBmHXhJ/naZiRYM=",
+        "ref": "refs/heads/canon",
+        "rev": "b8df88843fd8527b98ef95a950cf03a21084a49a",
+        "revCount": 18723,
+        "type": "git",
+        "url": "https://cl.tvl.fyi/depot"
+      },
+      "original": {
+        "type": "git",
+        "url": "https://cl.tvl.fyi/depot"
+      }
+    },
     "devshell": {
       "inputs": {
         "nixpkgs": [
@@ -105,6 +121,7 @@
     },
     "root": {
       "inputs": {
+        "depot": "depot",
         "devshell": "devshell",
         "flake-parts": "flake-parts",
         "flake-root": "flake-root",

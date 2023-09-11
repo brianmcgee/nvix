@@ -1,6 +1,7 @@
 {...}: {
   imports = [
     ./nats.nix
+    ./tvix.nix
   ];
 
   perSystem = {self', ...}: {
