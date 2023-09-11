@@ -5,7 +5,7 @@ import (
 	"syscall"
 
 	pb "code.tvl.fyi/tvix/store/protos"
-	"github.com/brianmcgee/tvix-store-nats/pkg/store"
+	"github.com/brianmcgee/nvix/pkg/store"
 	"github.com/charmbracelet/log"
 	"github.com/nats-io/nats.go"
 	"github.com/ztrue/shutdown"

@@ -2,7 +2,7 @@ package main
 
 import (
 	"github.com/alecthomas/kong"
-	"github.com/brianmcgee/tvix-store-nats/internal/cli"
+	"github.com/brianmcgee/nvix/internal/cli"
 )
 
 func main() {

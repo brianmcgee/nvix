@@ -1,4 +1,4 @@
-module github.com/brianmcgee/tvix-store-nats
+module github.com/brianmcgee/nvix
 
 go 1.20
 
