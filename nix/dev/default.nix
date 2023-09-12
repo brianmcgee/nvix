@@ -1,6 +1,7 @@
 {...}: {
   imports = [
     ./nats.nix
+    ./nvix.nix
     ./tvix.nix
   ];
 
