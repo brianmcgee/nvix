@@ -3,11 +3,11 @@
     "depot": {
       "flake": false,
       "locked": {
-        "lastModified": 1694419930,
-        "narHash": "sha256-Co+38wEn6Gtve34u2QZ7nkX/3x5efBmHXhJ/naZiRYM=",
+        "lastModified": 1694427096,
+        "narHash": "sha256-3NlQTYXbWEJ6Aqdty/OCNLQDDuCuI1qjapqxL1gQV6g=",
         "ref": "refs/heads/canon",
-        "rev": "b8df88843fd8527b98ef95a950cf03a21084a49a",
-        "revCount": 18723,
+        "rev": "424ac8b577b6fda42ca9005194288d66b82e13e0",
+        "revCount": 18724,
         "type": "git",
         "url": "https://cl.tvl.fyi/depot"
       },
@@ -24,11 +24,11 @@
         "systems": "systems"
       },
       "locked": {
-        "lastModified": 1693833206,
-        "narHash": "sha256-wHOY0nnD6gWj8u9uI85/YlsganYyWRK1hLFZulZwfmY=",
+        "lastModified": 1694435990,
+        "narHash": "sha256-yLQPD2eZGepu3yvdwABXrR3GhAqWRWTj9rn3a4knYuk=",
         "owner": "numtide",
         "repo": "devshell",
-        "rev": "65114ea495a8d3cc1352368bf170d67ef005aa5a",
+        "rev": "f6aec2e8b1cdddcab10ce7fc2eac66886e3deaad",
         "type": "github"
       },
       "original": {
@@ -72,11 +72,11 @@
     },
     "nixpkgs": {
       "locked": {
-        "lastModified": 1694062546,
-        "narHash": "sha256-PiGI4f2BGnZcedP6slLjCLGLRLXPa9+ogGGgVPfGxys=",
+        "lastModified": 1694343207,
+        "narHash": "sha256-jWi7OwFxU5Owi4k2JmiL1sa/OuBCQtpaAesuj5LXC8w=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "b200e0df08f80c32974a6108ce431d8a8a5e6547",
+        "rev": "78058d810644f5ed276804ce7ea9e82d92bee293",
         "type": "github"
       },
       "original": {
