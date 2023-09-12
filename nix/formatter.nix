@@ -25,9 +25,9 @@
     devshells.default = {
       commands = [
         {
-          category = "formatting";
+          category = "checks";
           name = "fmt";
-          help = "format the repo";
+          help = "Format the repo";
           command = "nix fmt";
         }
       ];

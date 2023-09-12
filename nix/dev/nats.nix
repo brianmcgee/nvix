@@ -25,6 +25,15 @@
         include './auth.conf'
       '';
     };
+
+    # we need to wrap nsc and nats to ensure they pick up key related stated from the data directory
+    nscWrapped = pkgs.writeShellScriptBin "nsc" ''
+      XDG_CONFIG_HOME="$PRJ_DATA_DIR" ${pkgs.nsc}/bin/nsc -H $NSC_HOME "$@"
+    '';
+
+    natsWrapped = pkgs.writeShellScriptBin "nats" ''
+      XDG_CONFIG_HOME="$PRJ_DATA_DIR" ${pkgs.natscli}/bin/nats "$@"
+    '';
   in {
     config.process-compose = {
       dev.settings.processes = {
@@ -50,7 +59,7 @@
           };
           command = pkgs.writeShellApplication {
             name = "nsc-push";
-            runtimeInputs = [pkgs.nsc];
+            runtimeInputs = [nscWrapped];
             text = ''nsc push'';
           };
         };
@@ -122,13 +131,13 @@
       in [
         {
           inherit category;
-          name = "nsc";
-          command = ''XDG_CONFIG_HOME=$PRJ_DATA_DIR ${pkgs.nsc}/bin/nsc -H "$NSC_HOME" "$@"'';
+          help = "Creates NATS operators, accounts, users, and manage their permissions";
+          package = nscWrapped;
         }
         {
           inherit category;
-          name = "nats";
-          command = ''XDG_CONFIG_HOME=$PRJ_DATA_DIR ${pkgs.natscli}/bin/nats "$@"'';
+          help = "NATS Server and JetStream administration";
+          package = natsWrapped;
         }
       ];
     };

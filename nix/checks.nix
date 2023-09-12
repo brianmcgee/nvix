@@ -26,7 +26,7 @@
       commands = [
         {
           name = "check";
-          help = "run all linters and build all packages";
+          help = "Run all linters and build all packages";
           category = "checks";
           command = "nix flake check";
         }

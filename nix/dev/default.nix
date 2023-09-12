@@ -14,12 +14,12 @@
       commands = [
         {
           category = "development";
-          help = "run local dev services";
+          help = "Run local dev services";
           package = self'.packages.dev;
         }
         {
           category = "development";
-          help = "re-initialise data directory";
+          help = "Re-initialise state for dev services";
           name = "dev-init";
           command = "rm -rf $PRJ_DATA_DIR && direnv reload";
         }
