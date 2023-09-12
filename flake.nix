@@ -29,6 +29,10 @@
       url = "git+https://cl.tvl.fyi/depot";
       flake = false;
     };
+    flake-compat = {
+      url = "github:edolstra/flake-compat";
+      flake = false;
+    };
   };
 
   outputs = inputs @ {flake-parts, ...}:
