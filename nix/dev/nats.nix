@@ -30,7 +30,7 @@
       dev.settings.processes = {
         nats-server = {
           working_dir = "$NATS_HOME";
-          command = ''${lib.getExe pkgs.nats-server} -c ./nats.conf -DV -sd ./'';
+          command = ''${lib.getExe pkgs.nats-server} -c ./nats.conf -sd ./'';
           readiness_probe = {
             http_get = {
               host = "127.0.0.1";
@@ -43,7 +43,7 @@
 
         nsc-push = {
           depends_on = {
-            nats-server.condition = "process_started";
+            nats-server.condition = "process_healthy";
           };
           environment = {
             XDG_CONFIG_HOME = "$PRJ_DATA_DIR";
@@ -52,9 +52,6 @@
             name = "nsc-push";
             runtimeInputs = [pkgs.nsc];
             text = ''nsc push'';
-          };
-          availability = {
-            restart = "on_failure";
           };
         };
       };
