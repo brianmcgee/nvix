@@ -25,7 +25,7 @@
         meta = with lib; {
           description = "NVIX: a NATS-based store for TVIX";
           homepage = "https://github.com/brianmcgee/nvix";
-          license = licenses.apsl20;
+          license = licenses.mit;
           mainProgram = "nvix";
         };
       };
