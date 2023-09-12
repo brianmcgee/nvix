@@ -4,6 +4,7 @@
     ./checks.nix
     ./devshell.nix
     ./dev
+    ./docs.nix
     ./formatter.nix
     ./packages.nix
   ];

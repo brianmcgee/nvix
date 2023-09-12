@@ -32,7 +32,7 @@
           [
             # golang
             pkgs.go
-            pkgs.go-tools
+            pkgs.gotools
             pkgs.delve
             pkgs.golangci-lint
 
