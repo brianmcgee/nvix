@@ -6,6 +6,8 @@ import (
 	"io"
 	"testing"
 
+	"github.com/jotfs/fastcdc-go"
+
 	pb "code.tvl.fyi/tvix/store/protos"
 
 	"github.com/charmbracelet/log"
@@ -17,6 +19,13 @@ import (
 
 func blobServer(s *server.Server, t *testing.T) (*grpc.Server, *bufconn.Listener) {
 	t.Helper()
+
+	// reduce the chunk options to speed up testing
+	ChunkOptions = fastcdc.Options{
+		MinSize:     128 * 1024,
+		AverageSize: 256 * 1024,
+		MaxSize:     512 * 1024,
+	}
 
 	blobService, err := NewService(natsConn(t, s))
 	if err != nil {
