@@ -53,6 +53,9 @@
             runtimeInputs = [pkgs.nsc];
             text = ''nsc push'';
           };
+          availability = {
+            restart = "on_failure";
+          };
         };
       };
     };
