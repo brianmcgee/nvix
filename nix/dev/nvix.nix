@@ -11,7 +11,7 @@
           environment = {
             NVIX_STORE_NATS_CREDENTIALS_FILE = "./nsc/creds/Tvix/Store/Server.creds";
           };
-          command = lib.getExe self'.packages.nvix;
+          command = "${lib.getExe self'.packages.nvix} store";
           # TODO readiness probe
         };
       };

@@ -1,15 +1,16 @@
-package cli
+package store
 
 import (
 	"net"
 	"syscall"
+
+	"github.com/nats-io/nats.go"
 
 	"github.com/brianmcgee/nvix/pkg/store/blob"
 
 	pb "code.tvl.fyi/tvix/store/protos"
 
 	"github.com/charmbracelet/log"
-	"github.com/nats-io/nats.go"
 	"github.com/ztrue/shutdown"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
