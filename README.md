@@ -3,7 +3,6 @@
 [![GoDoc](https://img.shields.io/badge/godoc-reference-blue.svg)](http://godoc.org/github.com/brianmcgee/nvix)
 ![Build](https://github.com/brianmcgee/nvix/actions/workflows/ci.yaml/badge.svg)
 [![Coverage Status](https://coveralls.io/repos/github/brianmcgee/nvix/badge.svg)](https://coveralls.io/github/brianmcgee/nvix)
-[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 Status: _ACTIVE_
 
