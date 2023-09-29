@@ -135,21 +135,26 @@ func (b *service) Read(request *pb.ReadBlobRequest, server pb.BlobService_ReadSe
 }
 
 func (b *service) Put(server pb.BlobService_PutServer) (err error) {
-	allReader, allWriter := io.Pipe()
-	chunkReader, chunkWriter := io.Pipe()
+	ctx := server.Context()
+
+	hasher := blake3.New(32, nil)
+	reader, writer := io.Pipe()
+
+	chunker, err := fastcdc.NewChunker(io.TeeReader(reader, hasher), ChunkOptions)
+	if err != nil {
+		log.Error("failed to create a chunker", "error", err)
+		return status.Error(codes.Internal, "internal error")
+	}
 
 	var blobDigest []byte
 	blobMeta := pb.BlobMeta{}
-
-	multiWriter := io.MultiWriter(allWriter, chunkWriter)
 
 	eg, ctx := errgroup.WithContext(server.Context())
 
 	// pull chunks from the server and insert into the pipeline
 	eg.Go(func() error {
 		defer func() {
-			_ = allWriter.CloseWithError(ctx.Err())
-			_ = chunkWriter.CloseWithError(ctx.Err())
+			_ = writer.CloseWithError(ctx.Err())
 		}()
 
 		for {
@@ -165,7 +170,7 @@ func (b *service) Put(server pb.BlobService_PutServer) (err error) {
 					return errors.Annotate(err, "failed to receive next next chunk")
 				}
 
-				n, err := io.Copy(multiWriter, bytes.NewReader(chunk.Data))
+				n, err := io.Copy(writer, bytes.NewReader(chunk.Data))
 				if err != nil {
 					return errors.Annotate(err, "failed to write next chunk into processing pipe")
 				}
@@ -177,29 +182,24 @@ func (b *service) Put(server pb.BlobService_PutServer) (err error) {
 
 	// chunk the input
 	eg.Go(func() error {
-		chunker, err := fastcdc.NewChunker(chunkReader, ChunkOptions)
-		if err != nil {
-			log.Error("failed to create a chunker", "error", err)
-			return status.Error(codes.Internal, "internal error")
-		}
-
 		js, err := b.conn.JetStream()
 		if err != nil {
 			return errors.Annotate(err, "failed to create a JetStream context")
 		}
 
-		hasher := blake3.New(32, nil)
+		chunkHasher := blake3.New(32, nil)
 
 		for {
 			chunk, err := chunker.Next()
 			if err == io.EOF {
 				// no more chunks
+				blobDigest = hasher.Sum(nil)
 				return nil
 			} else if err != nil {
 				return errors.Annotate(err, "failed to read next chunk")
 			}
 
-			n, err := io.Copy(hasher, bytes.NewReader(chunk.Data))
+			n, err := io.Copy(chunkHasher, bytes.NewReader(chunk.Data))
 			if err != nil {
 				return errors.Annotate(err, "failed to write into chunk hasher")
 			} else if n == 0 {
@@ -207,7 +207,7 @@ func (b *service) Put(server pb.BlobService_PutServer) (err error) {
 				return nil
 			}
 
-			chunkDigest := hasher.Sum(nil)
+			chunkDigest := chunkHasher.Sum(nil)
 			chunkId := base64.StdEncoding.EncodeToString(chunkDigest)
 
 			msg := nats.NewMsg(subject.ChunkById(chunkId))
@@ -223,21 +223,7 @@ func (b *service) Put(server pb.BlobService_PutServer) (err error) {
 				Size:   uint32(len(chunk.Data)),
 			})
 
-			hasher.Reset()
-		}
-	})
-
-	eg.Go(func() error {
-		hasher := blake3.New(32, nil)
-		for {
-			n, err := io.Copy(hasher, allReader)
-			if err != nil {
-				return errors.Annotate(err, "failed to write next bytes for calculating overall hash")
-			} else if n == 0 {
-				// finished reading
-				blobDigest = hasher.Sum(nil)
-				return nil
-			}
+			chunkHasher.Reset()
 		}
 	})
 
