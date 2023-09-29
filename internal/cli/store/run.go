@@ -1,12 +1,11 @@
 package store
 
 import (
+	"github.com/brianmcgee/nvix/pkg/blob"
 	"net"
 	"syscall"
 
 	"github.com/nats-io/nats.go"
-
-	"github.com/brianmcgee/nvix/pkg/store/blob"
 
 	pb "code.tvl.fyi/tvix/castore/protos"
 

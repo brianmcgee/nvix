@@ -6,7 +6,7 @@ import (
 	"encoding/base64"
 	"io"
 
-	"github.com/brianmcgee/nvix/pkg/store/subject"
+	"github.com/brianmcgee/nvix/pkg/subject"
 
 	capb "code.tvl.fyi/tvix/castore/protos"
 	pb "github.com/brianmcgee/nvix/protos"
