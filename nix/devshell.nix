@@ -35,6 +35,8 @@
             pkgs.gotools
             pkgs.delve
             pkgs.golangci-lint
+            pkgs.protobuf
+            pkgs.protoc-gen-go
 
             pkgs.openssl
 

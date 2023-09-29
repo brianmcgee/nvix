@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package nvix.blobstore.v1;
+
+option go_package = "github.com/brianmcgee/nvix/protos;protos";
+
+message BlobMeta {
+  repeated ChunkMeta chunks = 1;
+
+  message ChunkMeta {
+    bytes digest = 1;
+    uint32 size = 2;
+  }
+}

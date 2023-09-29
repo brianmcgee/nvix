@@ -8,7 +8,7 @@ import (
 
 	"github.com/jotfs/fastcdc-go"
 
-	pb "code.tvl.fyi/tvix/store/protos"
+	pb "code.tvl.fyi/tvix/castore/protos"
 
 	"github.com/charmbracelet/log"
 	"github.com/nats-io/nats-server/v2/server"

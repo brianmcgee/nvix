@@ -8,7 +8,8 @@ import (
 
 	"github.com/brianmcgee/nvix/pkg/store/subject"
 
-	pb "code.tvl.fyi/tvix/store/protos"
+	capb "code.tvl.fyi/tvix/castore/protos"
+	pb "github.com/brianmcgee/nvix/protos"
 
 	"github.com/charmbracelet/log"
 	"github.com/golang/protobuf/proto"
@@ -28,7 +29,7 @@ var ChunkOptions = fastcdc.Options{
 	MaxSize:     (8 * 1024 * 1024) - 1024, // we allow 1kb for headers to avoid max message size
 }
 
-func NewService(conn *nats.Conn) (pb.BlobServiceServer, error) {
+func NewService(conn *nats.Conn) (capb.BlobServiceServer, error) {
 	js, err := conn.JetStream()
 	if err != nil {
 		return nil, errors.Annotate(err, "failed to create a JetStream context")
@@ -58,11 +59,11 @@ func NewService(conn *nats.Conn) (pb.BlobServiceServer, error) {
 }
 
 type service struct {
-	pb.UnimplementedBlobServiceServer
+	capb.UnimplementedBlobServiceServer
 	conn *nats.Conn
 }
 
-func (b *service) getBlobMeta(ctx context.Context, js nats.JetStreamContext, digest []byte) (*pb.BlobMeta, error) {
+func (b *service) getBlobMeta(_ context.Context, js nats.JetStreamContext, digest []byte) (*pb.BlobMeta, error) {
 	subj := subject.BlobByDigest(digest)
 	blobMsg, err := js.GetLastMsg("blobs", subj)
 	if err == nats.ErrMsgNotFound {
@@ -81,17 +82,23 @@ func (b *service) getBlobMeta(ctx context.Context, js nats.JetStreamContext, dig
 	return &blobMeta, nil
 }
 
-func (b *service) Stat(ctx context.Context, request *pb.StatBlobRequest) (*pb.BlobMeta, error) {
+func (b *service) Stat(ctx context.Context, request *capb.StatBlobRequest) (*capb.BlobMeta, error) {
 	js, err := b.conn.JetStream()
 	if err != nil {
 		log.Errorf("failed to create a JetStream context: %v", err)
 		return nil, status.Error(codes.Internal, "internal error")
 	}
 
-	return b.getBlobMeta(ctx, js, request.Digest)
+	_, err = b.getBlobMeta(ctx, js, request.Digest)
+	if err != nil {
+		return nil, err
+	}
+
+	// castore blob meta is now empty
+	return &capb.BlobMeta{}, nil
 }
 
-func (b *service) Read(request *pb.ReadBlobRequest, server pb.BlobService_ReadServer) error {
+func (b *service) Read(request *capb.ReadBlobRequest, server capb.BlobService_ReadServer) error {
 	js, err := b.conn.JetStream()
 	if err != nil {
 		log.Errorf("failed to create a JetStream context: %v", err)
@@ -122,7 +129,7 @@ func (b *service) Read(request *pb.ReadBlobRequest, server pb.BlobService_ReadSe
 				return status.Error(codes.Internal, "internal error")
 			}
 
-			if err = server.Send(&pb.BlobChunk{
+			if err = server.Send(&capb.BlobChunk{
 				Data: sendBuf[:n],
 			}); err != nil {
 				log.Errorf("failed to send blob chunk to client: %v", err)
@@ -134,7 +141,7 @@ func (b *service) Read(request *pb.ReadBlobRequest, server pb.BlobService_ReadSe
 	return nil
 }
 
-func (b *service) Put(server pb.BlobService_PutServer) (err error) {
+func (b *service) Put(server capb.BlobService_PutServer) (err error) {
 	ctx := server.Context()
 
 	hasher := blake3.New(32, nil)
@@ -257,7 +264,7 @@ func (b *service) Put(server pb.BlobService_PutServer) (err error) {
 
 	log.Debug("put complete", "id", msg.Subject, "chunks", len(blobMeta.Chunks))
 
-	return server.SendAndClose(&pb.PutBlobResponse{
+	return server.SendAndClose(&capb.PutBlobResponse{
 		Digest: blobDigest,
 	})
 }

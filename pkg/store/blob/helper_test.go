@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	pb "code.tvl.fyi/tvix/store/protos"
+	pb "code.tvl.fyi/tvix/castore/protos"
 
 	"github.com/charmbracelet/log"
 	"google.golang.org/grpc"
