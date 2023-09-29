@@ -36,6 +36,7 @@ require (
 	github.com/nats-io/jwt/v2 v2.5.0 // indirect
 	github.com/nats-io/nkeys v0.4.5 // indirect
 	github.com/nats-io/nuid v1.0.1 // indirect
+	github.com/nix-community/go-nix v0.0.0-20230825195510-c72199eca18e // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/rivo/uniseg v0.4.4 // indirect
 	golang.org/x/crypto v0.13.0 // indirect

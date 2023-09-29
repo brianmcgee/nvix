@@ -1,9 +1,10 @@
 package store
 
 import (
-	"github.com/brianmcgee/nvix/pkg/blob"
 	"net"
 	"syscall"
+
+	"github.com/brianmcgee/nvix/pkg/blob"
 
 	"github.com/nats-io/nats.go"
 

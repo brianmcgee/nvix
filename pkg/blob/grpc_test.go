@@ -6,7 +6,7 @@ import (
 	"io"
 	"testing"
 
-	"github.com/jotfs/fastcdc-go"
+	"github.com/brianmcgee/nvix/pkg/test"
 
 	pb "code.tvl.fyi/tvix/castore/protos"
 
@@ -20,14 +20,14 @@ import (
 func blobServer(s *server.Server, t *testing.T) (*grpc.Server, *bufconn.Listener) {
 	t.Helper()
 
-	// reduce the chunk options to speed up testing
-	ChunkOptions = fastcdc.Options{
-		MinSize:     128 * 1024,
-		AverageSize: 256 * 1024,
-		MaxSize:     512 * 1024,
-	}
+	//// reduce the chunk options to speed up testing
+	//ChunkOptions = fastcdc.Options{
+	//	MinSize:     128 * 1024,
+	//	AverageSize: 256 * 1024,
+	//	MaxSize:     512 * 1024,
+	//}
 
-	blobService, err := NewService(natsConn(t, s))
+	blobService, err := NewService(test.NatsConn(t, s))
 	if err != nil {
 		t.Fatalf("failed to create blob service: %v", err)
 	}
@@ -48,13 +48,13 @@ func blobServer(s *server.Server, t *testing.T) (*grpc.Server, *bufconn.Listener
 }
 
 func TestBlobService_Put(t *testing.T) {
-	s := runBasicJetStreamServer(t)
-	defer shutdownJSServerAndRemoveStorage(t, s)
+	s := test.RunBasicJetStreamServer(t)
+	defer test.ShutdownJSServerAndRemoveStorage(t, s)
 
 	srv, lis := blobServer(s, t)
 	defer srv.Stop()
 
-	conn := grpcConn(lis, t)
+	conn := test.GrpcConn(lis, t)
 	blobClient := pb.NewBlobServiceClient(conn)
 
 	payload := make([]byte, 100*1024*1024)
