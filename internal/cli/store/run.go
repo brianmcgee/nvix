@@ -8,7 +8,7 @@ import (
 
 	"github.com/brianmcgee/nvix/pkg/store/blob"
 
-	pb "code.tvl.fyi/tvix/store/protos"
+	pb "code.tvl.fyi/tvix/castore/protos"
 
 	"github.com/charmbracelet/log"
 	"github.com/ztrue/shutdown"

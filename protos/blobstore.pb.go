@@ -162,6 +162,7 @@ var (
 		(*BlobMeta_ChunkMeta)(nil), // 1: nvix.blobstore.v1.BlobMeta.ChunkMeta
 	}
 )
+
 var file_protos_blobstore_proto_depIdxs = []int32{
 	1, // 0: nvix.blobstore.v1.BlobMeta.chunks:type_name -> nvix.blobstore.v1.BlobMeta.ChunkMeta
 	1, // [1:1] is the sub-list for method output_type
