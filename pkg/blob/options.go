@@ -1,7 +1,7 @@
 package blob
 
 import (
-	"github.com/jotfs/fastcdc-go"
+	"github.com/SaveTheRbtz/fastcdc-go"
 )
 
 var ChunkOptions = fastcdc.Options{

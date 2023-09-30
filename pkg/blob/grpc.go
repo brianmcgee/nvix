@@ -10,8 +10,8 @@ import (
 	capb "code.tvl.fyi/tvix/castore/protos"
 	pb "github.com/brianmcgee/nvix/protos"
 
+	"github.com/SaveTheRbtz/fastcdc-go"
 	"github.com/charmbracelet/log"
-	"github.com/jotfs/fastcdc-go"
 	"github.com/juju/errors"
 	"github.com/nats-io/nats.go"
 	"golang.org/x/sync/errgroup"

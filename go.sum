@@ -2,6 +2,8 @@ code.tvl.fyi/tvix/castore/protos v0.0.0-20230922125121-72355662d742 h1:x7Lsxgggg
 code.tvl.fyi/tvix/castore/protos v0.0.0-20230922125121-72355662d742/go.mod h1:Ejhyvc0dJUWQMxtJxddfFuAF5N8IKIO94q5CP4czY8Y=
 code.tvl.fyi/tvix/store/protos v0.0.0-20230922173605-a8f079a8704f h1:ofj9+kiTixx5J9SZqx4mlZGjANd0+mZasSaWGaxkMqE=
 code.tvl.fyi/tvix/store/protos v0.0.0-20230922173605-a8f079a8704f/go.mod h1:CTxjayuqlGTbMyk0rdNkTwUoCupUCuSpIiz6NwZRzyw=
+github.com/SaveTheRbtz/fastcdc-go v0.3.0 h1:JdHvLlnijDuisYIwpRDcHZEjbxvCqtEmJ3gf35VJBgA=
+github.com/SaveTheRbtz/fastcdc-go v0.3.0/go.mod h1:2kMKqvBv1h9wCaUfETqsVkSESsCiFhp4YyEHyz7/SfE=
 github.com/alecthomas/assert/v2 v2.1.0 h1:tbredtNcQnoSd3QBhQWI7QZ3XHOVkw1Moklp2ojoH/0=
 github.com/alecthomas/kong v0.8.0 h1:ryDCzutfIqJPnNn0omnrgHLbAggDQM2VWHikE1xqK7s=
 github.com/alecthomas/kong v0.8.0/go.mod h1:n1iCIO2xS46oE8ZfYCNDqdR0b0wZNrXAIAqro/2132U=
