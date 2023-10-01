@@ -4,14 +4,16 @@ go 1.20
 
 require (
 	code.tvl.fyi/tvix/castore/protos v0.0.0-20230922125121-72355662d742
-	code.tvl.fyi/tvix/store/protos v0.0.0-20230922173605-a8f079a8704f
+	github.com/SaveTheRbtz/fastcdc-go v0.3.0
 	github.com/alecthomas/kong v0.8.0
 	github.com/charmbracelet/log v0.2.4
+	github.com/djherbis/buffer v1.2.0
+	github.com/djherbis/nio/v3 v3.0.1
 	github.com/golang/protobuf v1.5.3
-	github.com/jotfs/fastcdc-go v0.2.0
 	github.com/juju/errors v1.0.0
 	github.com/nats-io/nats-server/v2 v2.9.22
 	github.com/nats-io/nats.go v1.30.2
+	github.com/nix-community/go-nix v0.0.0-20230825195510-c72199eca18e
 	github.com/stretchr/testify v1.8.4
 	github.com/ztrue/shutdown v0.1.1
 	golang.org/x/sync v0.3.0
@@ -21,7 +23,6 @@ require (
 )
 
 require (
-	github.com/SaveTheRbtz/fastcdc-go v0.3.0 // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
 	github.com/charmbracelet/lipgloss v0.8.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
@@ -37,7 +38,6 @@ require (
 	github.com/nats-io/jwt/v2 v2.5.0 // indirect
 	github.com/nats-io/nkeys v0.4.5 // indirect
 	github.com/nats-io/nuid v1.0.1 // indirect
-	github.com/nix-community/go-nix v0.0.0-20230825195510-c72199eca18e // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/rivo/uniseg v0.4.4 // indirect
 	golang.org/x/crypto v0.13.0 // indirect

@@ -40,3 +40,53 @@ var (
 		AllowDirect:       true,
 	}
 )
+
+func NewChunkStore(conn *nats.Conn) Store {
+	diskPrefix := DiskBasedStreamConfig.Subjects[1]
+	diskPrefix = diskPrefix[:len(diskPrefix)-2]
+
+	memoryPrefix := MemoryBasedStreamConfig.Subjects[1]
+	memoryPrefix = memoryPrefix[:len(memoryPrefix)-2]
+
+	disk := &NatsStore{
+		Conn:          conn,
+		StreamConfig:  &DiskBasedStreamConfig,
+		SubjectPrefix: diskPrefix,
+	}
+
+	memory := &NatsStore{
+		Conn:          conn,
+		StreamConfig:  &MemoryBasedStreamConfig,
+		SubjectPrefix: memoryPrefix,
+	}
+
+	return &CachingStore{
+		Disk:   disk,
+		Memory: memory,
+	}
+}
+
+func NewMetaStore(conn *nats.Conn) Store {
+	diskPrefix := DiskBasedStreamConfig.Subjects[0]
+	diskPrefix = diskPrefix[:len(diskPrefix)-2]
+
+	memoryPrefix := MemoryBasedStreamConfig.Subjects[0]
+	memoryPrefix = memoryPrefix[:len(memoryPrefix)-2]
+
+	disk := &NatsStore{
+		Conn:          conn,
+		StreamConfig:  &DiskBasedStreamConfig,
+		SubjectPrefix: diskPrefix,
+	}
+
+	memory := &NatsStore{
+		Conn:          conn,
+		StreamConfig:  &MemoryBasedStreamConfig,
+		SubjectPrefix: memoryPrefix,
+	}
+
+	return &CachingStore{
+		Disk:   disk,
+		Memory: memory,
+	}
+}

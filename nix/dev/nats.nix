@@ -105,7 +105,11 @@
 
           # setup server config
 
-          mkdir -p $NATS_HOME
+          mkdir -p "$NATS_HOME"
+
+          # disable cow if underlying filesystem is btrfs
+          chattr +C "$NATS_HOME"
+
           cp ${config} "$NATS_HOME/nats.conf"
           nsc generate config --nats-resolver --config-file "$NATS_HOME/auth.conf"
 
