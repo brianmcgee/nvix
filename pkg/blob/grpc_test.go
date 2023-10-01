@@ -2,9 +2,13 @@ package blob
 
 import (
 	"bytes"
-	"crypto/rand"
+	"context"
 	"io"
+	"math/rand"
+	"net"
 	"testing"
+
+	"github.com/inhies/go-bytesize"
 
 	"github.com/brianmcgee/nvix/pkg/test"
 
@@ -14,29 +18,42 @@ import (
 	"github.com/nats-io/nats-server/v2/server"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/test/bufconn"
 )
 
-func blobServer(s *server.Server, t *testing.T) (*grpc.Server, *bufconn.Listener) {
-	t.Helper()
+var sizes = []bytesize.ByteSize{
+	1 << 10,
+	4 << 10,
+	16 << 10,
+	32 << 10,
+	64 << 10,
+	128 << 10,
+	256 << 10,
+	512 << 10,
+	1 << 20,
+	4 << 20,
+	16 << 20,
+	32 << 20,
+	64 << 20,
+	128 << 20,
+	512 << 20,
+	1 << 30,
+}
 
-	//// reduce the chunk options to speed up testing
-	//ChunkOptions = fastcdc.Options{
-	//	MinSize:     128 * 1024,
-	//	AverageSize: 256 * 1024,
-	//	MaxSize:     512 * 1024,
-	//}
+func blobServer(s *server.Server, t test.TestingT) (*grpc.Server, net.Listener) {
+	t.Helper()
 
 	blobService, err := NewService(test.NatsConn(t, s))
 	if err != nil {
 		t.Fatalf("failed to create blob service: %v", err)
 	}
 
-	srv := grpc.NewServer()
+	srv := grpc.NewServer(grpc.MaxRecvMsgSize(16 * 1024 * 1024))
 	pb.RegisterBlobServiceServer(srv, blobService)
 
-	buffer := 10 * 1024 * 1024
-	lis := bufconn.Listen(buffer)
+	lis, err := net.Listen("tcp", ":0")
+	if err != nil {
+		log.Fatalf("failed to listen: %v", err)
+	}
 
 	go func() {
 		if err := srv.Serve(lis); err != nil {
@@ -45,6 +62,59 @@ func blobServer(s *server.Server, t *testing.T) (*grpc.Server, *bufconn.Listener
 	}()
 
 	return srv, lis
+}
+
+func BenchmarkBlobService_Put(b *testing.B) {
+	s := test.RunBasicJetStreamServer(b)
+	defer test.ShutdownJSServerAndRemoveStorage(b, s)
+
+	srv, lis := blobServer(s, b)
+	defer srv.Stop()
+
+	conn := test.GrpcConn(lis, b)
+	client := pb.NewBlobServiceClient(conn)
+
+	for _, size := range sizes {
+		size := size
+		b.Run(size.String(), func(b *testing.B) {
+			rng := rand.New(rand.NewSource(1))
+			data := make([]byte, size)
+			rng.Read(data)
+
+			r := bytes.NewReader(data)
+			b.SetBytes(int64(size))
+			b.ReportAllocs()
+			b.ResetTimer()
+
+			sendBuf := make([]byte, (16*1024*1024)-5)
+
+			for i := 0; i < b.N; i++ {
+				r.Reset(data)
+
+				put, err := client.Put(context.Background())
+				if err != nil {
+					b.Fatal(err)
+				}
+
+				for {
+					if n, err := r.Read(sendBuf); err != nil {
+						if err == io.EOF {
+							break
+						} else {
+							b.Fatal(err)
+						}
+					} else if err = put.Send(&pb.BlobChunk{Data: sendBuf[:n]}); err != nil {
+						b.Fatal(err)
+					}
+				}
+
+				if _, err = put.CloseAndRecv(); err != nil {
+					b.Fatal(err)
+				}
+
+			}
+		})
+	}
 }
 
 func TestBlobService_Put(t *testing.T) {

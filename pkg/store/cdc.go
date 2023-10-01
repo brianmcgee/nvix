@@ -5,6 +5,8 @@ import (
 	"context"
 	"io"
 
+	"github.com/nats-io/nats.go"
+
 	"github.com/SaveTheRbtz/fastcdc-go"
 	pb "github.com/brianmcgee/nvix/protos"
 	"github.com/charmbracelet/log"
@@ -17,8 +19,8 @@ import (
 )
 
 var ChunkOptions = fastcdc.Options{
-	MinSize:     4 * 1024 * 1024,
-	AverageSize: 6 * 1024 * 1024,
+	MinSize:     1 * 1024 * 1024,
+	AverageSize: 4 * 1024 * 1024,
 	MaxSize:     (8 * 1024 * 1024) - 1024, // we allow 1kb for headers to avoid max message size
 }
 
@@ -97,6 +99,8 @@ func (c *CdcStore) Put(reader io.ReadCloser, ctx context.Context) (*Digest, erro
 	var blobDigest Digest
 	blobMeta := pb.BlobMeta{}
 
+	var futures []nats.PubAckFuture
+
 	for {
 		chunk, err := chunker.Next()
 		if err == io.EOF {
@@ -113,10 +117,13 @@ func (c *CdcStore) Put(reader io.ReadCloser, ctx context.Context) (*Digest, erro
 		}
 
 		chunkDigest := Digest(chunkHasher.Sum(nil))
-		err = c.Chunks.Put(chunkDigest.String(), io.NopCloser(bytes.NewReader(chunk.Data)), ctx)
+
+		future, err := c.Chunks.PutAsync(chunkDigest.String(), io.NopCloser(bytes.NewReader(chunk.Data)), ctx)
 		if err != nil {
 			return nil, errors.Annotate(err, "failed to put chunk")
 		}
+
+		futures = append(futures, future)
 
 		blobMeta.Chunks = append(blobMeta.Chunks, &pb.BlobMeta_ChunkMeta{
 			Digest: chunkDigest[:],
@@ -124,6 +131,15 @@ func (c *CdcStore) Put(reader io.ReadCloser, ctx context.Context) (*Digest, erro
 		})
 
 		chunkHasher.Reset()
+	}
+
+	for _, future := range futures {
+		select {
+		case <-future.Ok():
+		// do nothing
+		case err := <-future.Err():
+			return nil, errors.Annotate(err, "failed to put chunk")
+		}
 	}
 
 	b, err := proto.Marshal(&blobMeta)

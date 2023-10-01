@@ -17,6 +17,8 @@ const (
 type TestingT interface {
 	Helper()
 	Fatalf(msg string, args ...any)
+	Errorf(msg string, args ...any)
+	TempDir() string
 }
 
 type LogAdapter struct{}
@@ -62,7 +64,8 @@ func RunBasicJetStreamServer(t TestingT) *server.Server {
 	opts := test.DefaultTestOptions
 	opts.Port = -1
 	opts.JetStream = true
-	opts.Debug = true
+	opts.StoreDir = t.TempDir()
+	opts.Debug = false
 	opts.MaxPayload = 8 * 1024 * 1024
 	srv := test.RunServer(&opts)
 	srv.SetLoggerV2(&LogAdapter{}, opts.Debug, opts.Trace, false)

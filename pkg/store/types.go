@@ -4,6 +4,8 @@ import (
 	"context"
 	"io"
 
+	"github.com/nats-io/nats.go"
+
 	"github.com/juju/errors"
 	"github.com/nix-community/go-nix/pkg/nixbase32"
 )
@@ -21,5 +23,6 @@ func (d Digest) String() string {
 type Store interface {
 	Get(key string, ctx context.Context) (io.ReadCloser, error)
 	Put(key string, reader io.ReadCloser, ctx context.Context) error
+	PutAsync(key string, reader io.ReadCloser, ctx context.Context) (nats.PubAckFuture, error)
 	Delete(key string, ctx context.Context) error
 }

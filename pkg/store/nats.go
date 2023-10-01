@@ -39,24 +39,37 @@ func (n *NatsStore) Get(key string, ctx context.Context) (io.ReadCloser, error) 
 }
 
 func (n *NatsStore) Put(key string, reader io.ReadCloser, ctx context.Context) error {
-	js, err := n.js(ctx)
+	future, err := n.PutAsync(key, reader, ctx)
 	if err != nil {
 		return err
+	}
+
+	select {
+	case <-future.Ok():
+		return nil
+	case err := <-future.Err():
+		return err
+	}
+}
+
+func (n *NatsStore) PutAsync(key string, reader io.ReadCloser, ctx context.Context) (nats.PubAckFuture, error) {
+	js, err := n.js(ctx)
+	if err != nil {
+		return nil, err
 	}
 
 	msg := nats.NewMsg(n.subject(key))
 	msg.Data, err = io.ReadAll(reader)
 	if err != nil {
-		return err
+		return nil, err
 	} else if err = reader.Close(); err != nil {
-		return err
+		return nil, err
 	}
 
 	// overwrite the last msg for this subject
 	msg.Header.Set(nats.MsgRollup, nats.MsgRollupSubject)
 
-	_, err = js.PublishMsg(msg)
-	return err
+	return js.PublishMsgAsync(msg)
 }
 
 func (n *NatsStore) Delete(key string, ctx context.Context) error {

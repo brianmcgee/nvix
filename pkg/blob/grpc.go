@@ -4,9 +4,9 @@ import (
 	"context"
 	"io"
 
-	"github.com/brianmcgee/nvix/pkg/store"
-
 	capb "code.tvl.fyi/tvix/castore/protos"
+
+	"github.com/brianmcgee/nvix/pkg/store"
 	"github.com/charmbracelet/log"
 	"github.com/juju/errors"
 	"github.com/nats-io/nats.go"

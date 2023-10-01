@@ -5,6 +5,8 @@ import (
 	"context"
 	"io"
 
+	"github.com/nats-io/nats.go"
+
 	"github.com/charmbracelet/log"
 )
 
@@ -34,6 +36,10 @@ func (c *CachingStore) Get(key string, ctx context.Context) (reader io.ReadClose
 
 func (c *CachingStore) Put(key string, reader io.ReadCloser, ctx context.Context) error {
 	return c.Disk.Put(key, reader, ctx)
+}
+
+func (c *CachingStore) PutAsync(key string, reader io.ReadCloser, ctx context.Context) (nats.PubAckFuture, error) {
+	return c.Disk.PutAsync(key, reader, ctx)
 }
 
 func (c *CachingStore) Delete(key string, ctx context.Context) error {
