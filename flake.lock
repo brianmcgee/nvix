@@ -3,11 +3,11 @@
     "depot": {
       "flake": false,
       "locked": {
-        "lastModified": 1696008326,
-        "narHash": "sha256-POojcrCdauMEnA3N/kAa+WWaHbLVTYj1wHP+HoZ0Wro=",
+        "lastModified": 1696110457,
+        "narHash": "sha256-/Iynr6hKA8AYY2xQkr9xwAUFe/3Bh39xEC9a7JFPNao=",
         "ref": "refs/heads/canon",
-        "rev": "acfc49efc22b443896b42cba17b42ef234ff4f82",
-        "revCount": 18819,
+        "rev": "c5cb622d024cbda87711d83f8ad1214312d397e4",
+        "revCount": 18825,
         "type": "git",
         "url": "https://cl.tvl.fyi/depot"
       },
