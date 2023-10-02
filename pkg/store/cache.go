@@ -29,17 +29,13 @@ func (c *CachingStore) Stat(key string, ctx context.Context) (ok bool, err error
 func (c *CachingStore) Get(key string, ctx context.Context) (reader io.ReadCloser, err error) {
 	// try in Memory store first
 	reader, err = c.Memory.Get(key, ctx)
-	if err == ErrKeyNotFound {
-		log.Debug("cache miss", "key", key)
-		// fallback and try the Disk based store last
-		reader, err = c.Disk.Get(key, ctx)
-		if err == nil {
-			reader = cacheWriter{
-				store:  c.Memory,
-				key:    key,
-				reader: reader,
-				buf:    bytes.NewBuffer(nil),
-			}
+	if err == nil {
+		reader = &cacheReader{
+			key:    key,
+			disk:   c.Disk,
+			memory: c.Memory,
+			ctx:    ctx,
+			reader: reader,
 		}
 	}
 	return
@@ -81,4 +77,41 @@ func (c cacheWriter) Close() (err error) {
 		log.Error("failed to populate cache", "key", c.key, "error", err)
 	}
 	return
+}
+
+type cacheReader struct {
+	key    string
+	disk   Store
+	memory Store
+	ctx    context.Context
+
+	reader  io.ReadCloser
+	faulted bool
+}
+
+func (c *cacheReader) Read(p []byte) (n int, err error) {
+	n, err = c.reader.Read(p)
+	if err == ErrKeyNotFound && !c.faulted {
+		_ = c.reader.Close()
+
+		log.Debug("cache miss", "key", c.key)
+		// fallback and try the Disk based store last
+		c.reader, err = c.disk.Get(c.key, c.ctx)
+		if err == nil {
+			c.reader = cacheWriter{
+				store:  c.memory,
+				key:    c.key,
+				reader: c.reader,
+				buf:    bytes.NewBuffer(nil),
+			}
+		}
+
+		c.faulted = true
+		n, err = c.reader.Read(p)
+	}
+	return
+}
+
+func (c *cacheReader) Close() error {
+	return c.reader.Close()
 }

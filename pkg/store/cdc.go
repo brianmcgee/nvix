@@ -5,13 +5,13 @@ import (
 	"context"
 	"io"
 
+	"golang.org/x/sync/errgroup"
+
 	"github.com/nats-io/nats.go"
 
 	"github.com/SaveTheRbtz/fastcdc-go"
 	pb "github.com/brianmcgee/nvix/protos"
 	"github.com/charmbracelet/log"
-	"github.com/djherbis/buffer"
-	"github.com/djherbis/nio/v3"
 	"github.com/golang/protobuf/proto"
 	"github.com/juju/errors"
 
@@ -39,7 +39,10 @@ func (c *CdcStore) getMeta(key string, ctx context.Context) (*pb.BlobMeta, error
 	}()
 
 	b, err := io.ReadAll(reader)
-	if err != nil {
+
+	if err == ErrKeyNotFound {
+		return nil, err
+	} else if err != nil {
 		return nil, errors.Annotate(err, "failed to read bytes")
 	}
 
@@ -50,45 +53,17 @@ func (c *CdcStore) getMeta(key string, ctx context.Context) (*pb.BlobMeta, error
 	return &meta, nil
 }
 
-func (c *CdcStore) Stat(key string, ctx context.Context) (ok bool, err error) {
-	return c.Meta.Stat(key, ctx)
+func (c *CdcStore) Stat(digest Digest, ctx context.Context) (ok bool, err error) {
+	return c.Meta.Stat(digest.String(), ctx)
 }
 
-func (c *CdcStore) Get(key string, ctx context.Context) (io.ReadCloser, error) {
-	meta, err := c.getMeta(key, ctx)
+func (c *CdcStore) Get(digest Digest, ctx context.Context) (io.ReadCloser, error) {
+	meta, err := c.getMeta(digest.String(), ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	// create a buffer with an average of 2 chunks
-	buf := buffer.New(int64(ChunkOptions.AverageSize))
-	r, w := nio.Pipe(buf)
-
-	go c.readChunks(meta, w, ctx)
-
-	return r, nil
-}
-
-func (c *CdcStore) readChunks(meta *pb.BlobMeta, writer *nio.PipeWriter, ctx context.Context) {
-	var err error
-	var reader io.Reader
-
-	defer func() {
-		_ = writer.CloseWithError(err)
-	}()
-
-	for _, chunk := range meta.Chunks {
-		digest := Digest(chunk.Digest)
-		if reader, err = c.Chunks.Get(digest.String(), ctx); err != nil {
-			log.Error("failed to retrieve chunk", "digest", digest, "error", err)
-			return
-		} else if _, err = io.Copy(writer, reader); err != nil {
-			log.Error("failed to copy chunk", "digest", digest, "error", err)
-			return
-		}
-	}
-
-	return
+	return &blobReader{blob: meta, store: c.Chunks, ctx: ctx}, nil
 }
 
 func (c *CdcStore) Put(reader io.ReadCloser, ctx context.Context) (*Digest, error) {
@@ -160,13 +135,13 @@ func (c *CdcStore) Put(reader io.ReadCloser, ctx context.Context) (*Digest, erro
 	return &blobDigest, nil
 }
 
-func (c *CdcStore) Delete(key string, ctx context.Context) error {
-	meta, err := c.getMeta(key, ctx)
+func (c *CdcStore) Delete(digest Digest, ctx context.Context) error {
+	meta, err := c.getMeta(digest.String(), ctx)
 	if err != nil {
 		return err
 	}
 
-	if err = c.Meta.Delete(key, ctx); err != nil {
+	if err = c.Meta.Delete(digest.String(), ctx); err != nil {
 		return errors.Annotate(err, "failed to delete metadata entry")
 	}
 
@@ -178,5 +153,77 @@ func (c *CdcStore) Delete(key string, ctx context.Context) error {
 		}
 	}
 
+	return nil
+}
+
+type blobReader struct {
+	blob  *pb.BlobMeta
+	store Store
+
+	eg      *errgroup.Group
+	ctx     context.Context
+	readers chan io.ReadCloser
+
+	reader io.ReadCloser
+}
+
+func (c *blobReader) Read(p []byte) (n int, err error) {
+	if c.eg == nil {
+		var ctx context.Context
+		c.eg, ctx = errgroup.WithContext(c.ctx)
+
+		c.readers = make(chan io.ReadCloser, 2)
+
+		c.eg.Go(func() error {
+			// close channel on return
+			defer close(c.readers)
+
+			b := make([]byte, 0)
+
+			for _, chunk := range c.blob.Chunks {
+				r, err := c.store.Get(Digest(chunk.Digest).String(), ctx)
+				if err != nil {
+					return err
+				}
+
+				// tickle the reader to force it to fetch the underlying message and is ready for reading
+				_, err = r.Read(b)
+				if err != nil {
+					return err
+				}
+				c.readers <- r
+			}
+			return nil
+		})
+	}
+
+	for {
+		if c.reader == nil {
+			var ok bool
+			c.reader, ok = <-c.readers
+			if !ok {
+				// channel has been closed
+				err = c.eg.Wait()
+				if err == nil {
+					err = io.EOF
+				}
+				return
+			}
+		}
+
+		n, err = c.reader.Read(p)
+		if err == io.EOF {
+			if err = c.Close(); err != nil {
+				return
+			}
+			c.reader = nil
+		} else {
+			return
+		}
+	}
+}
+
+func (c *blobReader) Close() error {
+	// do nothing
 	return nil
 }

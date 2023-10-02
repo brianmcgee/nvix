@@ -16,11 +16,20 @@ type NatsStore struct {
 }
 
 func (n *NatsStore) Stat(key string, ctx context.Context) (ok bool, err error) {
-	_, err = n.Get(key, ctx)
-	if err == ErrKeyNotFound {
-		err = nil
+	var reader io.ReadCloser
+	reader, err = n.Get(key, ctx)
+	if err != nil {
+		return
 	}
+	defer func() {
+		_ = reader.Close()
+	}()
+
+	// try to read, forcing an error if the entry doesn't exist
+	b := make([]byte, 0)
+	_, err = reader.Read(b)
 	ok = err == nil
+
 	return
 }
 
@@ -34,17 +43,13 @@ func (n *NatsStore) Get(key string, ctx context.Context) (io.ReadCloser, error) 
 		return nil, err
 	}
 
-	subj := n.subject(key)
-	msg, err := js.GetLastMsg(n.StreamConfig.Name, subj)
-	if err != nil {
-		if err == nats.ErrMsgNotFound {
-			return nil, ErrKeyNotFound
-		} else {
-			return nil, errors.Annotate(err, "failed to retrieve last msg from stream")
-		}
+	reader := natsMsgReader{
+		js:      js,
+		stream:  n.StreamConfig.Name,
+		subject: n.subject(key),
 	}
 
-	return io.NopCloser(bytes.NewReader(msg.Data)), nil
+	return &reader, nil
 }
 
 func (n *NatsStore) Put(key string, reader io.ReadCloser, ctx context.Context) error {
@@ -98,4 +103,31 @@ func (n *NatsStore) js(_ context.Context) (nats.JetStreamContext, error) {
 		err = errors.Annotate(err, "failed to create js context")
 	}
 	return js, err
+}
+
+type natsMsgReader struct {
+	js      nats.JetStreamContext
+	stream  string
+	subject string
+
+	msg    *nats.RawStreamMsg
+	reader io.Reader
+}
+
+func (r *natsMsgReader) Read(p []byte) (n int, err error) {
+	if r.msg == nil {
+		r.msg, err = r.js.GetLastMsg(r.stream, r.subject)
+		if err == nats.ErrMsgNotFound {
+			return 0, ErrKeyNotFound
+		} else if err != nil {
+			return
+		}
+		r.reader = bytes.NewReader(r.msg.Data)
+	}
+
+	return r.reader.Read(p)
+}
+
+func (r *natsMsgReader) Close() error {
+	return nil
 }

@@ -16,6 +16,7 @@ const (
 
 type TestingT interface {
 	Helper()
+	Fatal(args ...any)
 	Fatalf(msg string, args ...any)
 	Errorf(msg string, args ...any)
 	TempDir() string

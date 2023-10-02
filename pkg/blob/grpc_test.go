@@ -31,6 +31,7 @@ var sizes = []bytesize.ByteSize{
 	512 << 10,
 	1 << 20,
 	4 << 20,
+	8 << 20,
 	16 << 20,
 	32 << 20,
 	64 << 20,
@@ -112,6 +113,82 @@ func BenchmarkBlobService_Put(b *testing.B) {
 					b.Fatal(err)
 				}
 
+			}
+		})
+	}
+}
+
+func BenchmarkBlobService_Read(b *testing.B) {
+	s := test.RunBasicJetStreamServer(b)
+	defer test.ShutdownJSServerAndRemoveStorage(b, s)
+
+	srv, lis := blobServer(s, b)
+	defer srv.Stop()
+
+	conn := test.GrpcConn(lis, b)
+	client := pb.NewBlobServiceClient(conn)
+
+	for _, size := range sizes {
+		size := size
+
+		rng := rand.New(rand.NewSource(1))
+		data := make([]byte, size)
+		rng.Read(data)
+
+		r := bytes.NewReader(data)
+
+		put, err := client.Put(context.Background())
+		if err != nil {
+			b.Fatal(err)
+		}
+
+		sendBuf := make([]byte, (16*1024*1024)-5)
+		for {
+			if n, err := r.Read(sendBuf); err != nil {
+				if err == io.EOF {
+					break
+				} else {
+					b.Fatal(err)
+				}
+			} else if err = put.Send(&pb.BlobChunk{Data: sendBuf[:n]}); err != nil {
+				b.Fatal(err)
+			}
+		}
+
+		resp, err := put.CloseAndRecv()
+		if err != nil {
+			b.Fatal(err)
+		}
+
+		b.Run(size.String(), func(b *testing.B) {
+			b.SetBytes(int64(size))
+			b.ReportAllocs()
+			b.ResetTimer()
+
+			for i := 0; i < b.N; i++ {
+				buf := bytes.NewBuffer(nil)
+
+				read, err := client.Read(context.Background(), &pb.ReadBlobRequest{Digest: resp.Digest})
+				if err != nil {
+					b.Fatal(err)
+				}
+
+				for {
+					chunk, err := read.Recv()
+					if err == io.EOF {
+						break
+					} else if err != nil {
+						b.Fatal(err)
+					}
+					_, err = buf.Write(chunk.Data)
+					if err != nil {
+						b.Fatal(err)
+					}
+				}
+
+				if buf.Len() != len(data) {
+					b.Fatalf("Received %v bytes, expected %v", buf.Len(), len(data))
+				}
 			}
 		})
 	}

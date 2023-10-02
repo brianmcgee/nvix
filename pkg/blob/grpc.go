@@ -46,7 +46,7 @@ type service struct {
 
 func (s *service) Stat(ctx context.Context, request *capb.StatBlobRequest) (*capb.BlobMeta, error) {
 	digest := store.Digest(request.Digest)
-	ok, err := s.store.Stat(digest.String(), ctx)
+	ok, err := s.store.Stat(digest, ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -62,7 +62,7 @@ func (s *service) Read(request *capb.ReadBlobRequest, server capb.BlobService_Re
 	defer cancel()
 
 	digest := store.Digest(request.Digest)
-	reader, err := s.store.Get(digest.String(), ctx)
+	reader, err := s.store.Get(digest, ctx)
 
 	if err == store.ErrKeyNotFound {
 		return status.Errorf(codes.NotFound, "blob not found: %v", digest)
@@ -72,7 +72,7 @@ func (s *service) Read(request *capb.ReadBlobRequest, server capb.BlobService_Re
 	}
 
 	// we want to stay just under the 4MB max size restriction in gRPC
-	sendBuf := make([]byte, (4*1024*1024)-1024)
+	sendBuf := make([]byte, (4*1024*1024)-5)
 
 	for {
 		n, err := reader.Read(sendBuf)
