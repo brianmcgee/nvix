@@ -15,7 +15,7 @@
         version = "0.0.1+dev";
 
         src = ../.;
-        vendorSha256 = "sha256-yPiwftwEEbYjhjn5ff72RufMCtgK9+Bvgu0nxIzVxX4=";
+        vendorSha256 = "sha256-CinfzBU3kF+Jdl2gQS+eAY3Tl3qKYYQqVRbXJln1Ajw=";
 
         ldflags = [
           "-X 'build.Name=${pname}'"
