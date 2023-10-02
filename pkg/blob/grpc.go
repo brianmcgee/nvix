@@ -45,10 +45,13 @@ type service struct {
 }
 
 func (s *service) Stat(ctx context.Context, request *capb.StatBlobRequest) (*capb.BlobMeta, error) {
-	// todo add an exists call which doesn't read the contents
-	_, err := s.store.Get(store.Digest(request.Digest).String(), ctx)
+	digest := store.Digest(request.Digest)
+	ok, err := s.store.Stat(digest.String(), ctx)
 	if err != nil {
 		return nil, err
+	}
+	if !ok {
+		return nil, status.Errorf(codes.NotFound, "blob not found: %v", digest)
 	}
 	// castore blob meta is empty for now
 	return &capb.BlobMeta{}, nil

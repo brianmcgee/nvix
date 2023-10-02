@@ -24,5 +24,6 @@ type Store interface {
 	Get(key string, ctx context.Context) (io.ReadCloser, error)
 	Put(key string, reader io.ReadCloser, ctx context.Context) error
 	PutAsync(key string, reader io.ReadCloser, ctx context.Context) (nats.PubAckFuture, error)
+	Stat(key string, ctx context.Context) (bool, error)
 	Delete(key string, ctx context.Context) error
 }

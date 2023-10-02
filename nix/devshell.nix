@@ -33,6 +33,8 @@
             # golang
             pkgs.go
             pkgs.gotools
+            pkgs.pprof
+            pkgs.rr
             pkgs.delve
             pkgs.golangci-lint
             pkgs.protobuf

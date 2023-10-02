@@ -15,6 +15,15 @@ type NatsStore struct {
 	SubjectPrefix string
 }
 
+func (n *NatsStore) Stat(key string, ctx context.Context) (ok bool, err error) {
+	_, err = n.Get(key, ctx)
+	if err == ErrKeyNotFound {
+		err = nil
+	}
+	ok = err == nil
+	return
+}
+
 func (n *NatsStore) subject(key string) string {
 	return n.SubjectPrefix + "." + key
 }

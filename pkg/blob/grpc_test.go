@@ -121,11 +121,13 @@ func TestBlobService_Put(t *testing.T) {
 	s := test.RunBasicJetStreamServer(t)
 	defer test.ShutdownJSServerAndRemoveStorage(t, s)
 
+	as := assert.New(t)
+
 	srv, lis := blobServer(s, t)
 	defer srv.Stop()
 
 	conn := test.GrpcConn(lis, t)
-	blobClient := pb.NewBlobServiceClient(conn)
+	client := pb.NewBlobServiceClient(conn)
 
 	payload := make([]byte, 100*1024*1024)
 	_, err := rand.Read(payload)
@@ -134,14 +136,18 @@ func TestBlobService_Put(t *testing.T) {
 	}
 
 	chunkSize := (4 * 1024 * 1024) - 1024 // stay just under 4MB grpc limit
-	resp, err := putBlob(blobClient, bytes.NewReader(payload), chunkSize, t)
+	resp, err := putBlob(client, bytes.NewReader(payload), chunkSize, t)
 	if err != nil {
 		t.Fatalf("failed to received a response: %v", err)
 	}
 
+	meta, err := client.Stat(context.Background(), &pb.StatBlobRequest{Digest: resp.Digest})
+	as.Nil(err)
+	as.NotNil(meta)
+
 	reader, writer := io.Pipe()
 	go func() {
-		getBlob(blobClient, resp.Digest, writer, t)
+		getBlob(client, resp.Digest, writer, t)
 	}()
 
 	payload2, err := io.ReadAll(reader)

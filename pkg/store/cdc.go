@@ -50,6 +50,10 @@ func (c *CdcStore) getMeta(key string, ctx context.Context) (*pb.BlobMeta, error
 	return &meta, nil
 }
 
+func (c *CdcStore) Stat(key string, ctx context.Context) (ok bool, err error) {
+	return c.Meta.Stat(key, ctx)
+}
+
 func (c *CdcStore) Get(key string, ctx context.Context) (io.ReadCloser, error) {
 	meta, err := c.getMeta(key, ctx)
 	if err != nil {

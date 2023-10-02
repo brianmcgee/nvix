@@ -15,6 +15,17 @@ type CachingStore struct {
 	Memory Store
 }
 
+func (c *CachingStore) Stat(key string, ctx context.Context) (ok bool, err error) {
+	ok, err = c.Memory.Stat(key, ctx)
+	if err == nil {
+		return
+	} else if !ok {
+		// check disk
+		ok, err = c.Disk.Stat(key, ctx)
+	}
+	return
+}
+
 func (c *CachingStore) Get(key string, ctx context.Context) (reader io.ReadCloser, err error) {
 	// try in Memory store first
 	reader, err = c.Memory.Get(key, ctx)
