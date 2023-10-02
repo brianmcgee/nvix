@@ -96,8 +96,7 @@ var sizes = []bytesize.ByteSize{
 	32 << 20,
 	64 << 20,
 	128 << 20,
-	512 << 20,
-	1 << 30,
+	256 << 20,
 }
 
 func BenchmarkCdcStore_Put(b *testing.B) {
@@ -116,21 +115,24 @@ func BenchmarkCdcStore_Put(b *testing.B) {
 	for _, size := range sizes {
 		size := size
 		b.Run(size.String(), func(b *testing.B) {
-			rng := rand.New(rand.NewSource(1))
-			data := make([]byte, size)
-			rng.Read(data)
-
-			r := bytes.NewReader(data)
 			b.SetBytes(int64(size))
 			b.ReportAllocs()
 			b.ResetTimer()
 
-			for i := 0; i < b.N; i++ {
-				r.Reset(data)
-				if _, err := store.Put(io.NopCloser(r), context.Background()); err != nil {
-					b.Fatal(err)
+			b.RunParallel(func(pb *testing.PB) {
+				rng := rand.New(rand.NewSource(1))
+				data := make([]byte, size)
+				rng.Read(data)
+
+				r := bytes.NewReader(data)
+
+				for pb.Next() {
+					r.Reset(data)
+					if _, err := store.Put(io.NopCloser(r), context.Background()); err != nil {
+						b.Fatal(err)
+					}
 				}
-			}
+			})
 		})
 	}
 }
@@ -167,26 +169,28 @@ func BenchmarkCdcStore_Get(b *testing.B) {
 			b.ReportAllocs()
 			b.ResetTimer()
 
-			for i := 0; i < b.N; i++ {
-				reader, err := store.Get(*digest, context.Background())
-				if err != nil {
-					b.Fatal(err)
-				}
+			b.RunParallel(func(pb *testing.PB) {
+				for pb.Next() {
+					reader, err := store.Get(*digest, context.Background())
+					if err != nil {
+						b.Fatal(err)
+					}
 
-				getData, err := io.ReadAll(reader)
-				if err != nil {
-					b.Fatal(err)
-				}
+					getData, err := io.ReadAll(reader)
+					if err != nil {
+						b.Fatal(err)
+					}
 
-				err = reader.Close()
-				if err != nil {
-					b.Fatal(err)
-				}
+					err = reader.Close()
+					if err != nil {
+						b.Fatal(err)
+					}
 
-				if len(getData) != len(data) {
-					b.Fatalf("expected %v bytes, received %v", len(data), len(getData))
+					if len(getData) != len(data) {
+						b.Fatalf("expected %v bytes, received %v", len(data), len(getData))
+					}
 				}
-			}
+			})
 		})
 	}
 }

@@ -36,8 +36,8 @@ var sizes = []bytesize.ByteSize{
 	32 << 20,
 	64 << 20,
 	128 << 20,
+	256 << 20,
 	512 << 20,
-	1 << 30,
 }
 
 func blobServer(s *server.Server, t test.TestingT) (*grpc.Server, net.Listener) {
@@ -78,42 +78,44 @@ func BenchmarkBlobService_Put(b *testing.B) {
 	for _, size := range sizes {
 		size := size
 		b.Run(size.String(), func(b *testing.B) {
-			rng := rand.New(rand.NewSource(1))
-			data := make([]byte, size)
-			rng.Read(data)
-
-			r := bytes.NewReader(data)
 			b.SetBytes(int64(size))
 			b.ReportAllocs()
 			b.ResetTimer()
 
-			sendBuf := make([]byte, (16*1024*1024)-5)
+			b.RunParallel(func(p *testing.PB) {
+				rng := rand.New(rand.NewSource(1))
+				data := make([]byte, size)
+				rng.Read(data)
 
-			for i := 0; i < b.N; i++ {
-				r.Reset(data)
+				r := bytes.NewReader(data)
 
-				put, err := client.Put(context.Background())
-				if err != nil {
-					b.Fatal(err)
-				}
+				sendBuf := make([]byte, (16*1024*1024)-5)
 
-				for {
-					if n, err := r.Read(sendBuf); err != nil {
-						if err == io.EOF {
-							break
-						} else {
+				for p.Next() {
+					r.Reset(data)
+
+					put, err := client.Put(context.Background())
+					if err != nil {
+						b.Fatal(err)
+					}
+
+					for {
+						if n, err := r.Read(sendBuf); err != nil {
+							if err == io.EOF {
+								break
+							} else {
+								b.Fatal(err)
+							}
+						} else if err = put.Send(&pb.BlobChunk{Data: sendBuf[:n]}); err != nil {
 							b.Fatal(err)
 						}
-					} else if err = put.Send(&pb.BlobChunk{Data: sendBuf[:n]}); err != nil {
+					}
+
+					if _, err = put.CloseAndRecv(); err != nil {
 						b.Fatal(err)
 					}
 				}
-
-				if _, err = put.CloseAndRecv(); err != nil {
-					b.Fatal(err)
-				}
-
-			}
+			})
 		})
 	}
 }
@@ -165,31 +167,33 @@ func BenchmarkBlobService_Read(b *testing.B) {
 			b.ReportAllocs()
 			b.ResetTimer()
 
-			for i := 0; i < b.N; i++ {
-				buf := bytes.NewBuffer(nil)
+			b.RunParallel(func(p *testing.PB) {
+				for p.Next() {
+					buf := bytes.NewBuffer(nil)
 
-				read, err := client.Read(context.Background(), &pb.ReadBlobRequest{Digest: resp.Digest})
-				if err != nil {
-					b.Fatal(err)
-				}
-
-				for {
-					chunk, err := read.Recv()
-					if err == io.EOF {
-						break
-					} else if err != nil {
-						b.Fatal(err)
-					}
-					_, err = buf.Write(chunk.Data)
+					read, err := client.Read(context.Background(), &pb.ReadBlobRequest{Digest: resp.Digest})
 					if err != nil {
 						b.Fatal(err)
 					}
-				}
 
-				if buf.Len() != len(data) {
-					b.Fatalf("Received %v bytes, expected %v", buf.Len(), len(data))
+					for {
+						chunk, err := read.Recv()
+						if err == io.EOF {
+							break
+						} else if err != nil {
+							b.Fatal(err)
+						}
+						_, err = buf.Write(chunk.Data)
+						if err != nil {
+							b.Fatal(err)
+						}
+					}
+
+					if buf.Len() != len(data) {
+						b.Fatalf("Received %v bytes, expected %v", buf.Len(), len(data))
+					}
 				}
-			}
+			})
 		})
 	}
 }
