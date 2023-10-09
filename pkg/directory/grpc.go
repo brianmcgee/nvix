@@ -96,7 +96,7 @@ func (s *service) Get(req *capb.GetDirectoryRequest, server capb.DirectoryServic
 			digest := store.Digest(dir.Digest)
 			if d, err := fetch(digest); err != nil {
 				return err
-			} else {
+			} else if req.Recursive {
 				dirs = append(dirs, d)
 			}
 		}
