@@ -20,19 +20,19 @@ func NewService(conn *nats.Conn) (capb.BlobServiceServer, error) {
 		return nil, errors.Annotate(err, "failed to create a JetStream context")
 	}
 
-	if _, err := js.AddStream(&store.DiskBasedStreamConfig); err != nil {
+	if _, err := js.AddStream(&DiskBasedStreamConfig); err != nil {
 		return nil, errors.Annotate(err, "failed to create disk based stream")
 	}
 
-	if _, err := js.AddStream(&store.MemoryBasedStreamConfig); err != nil {
+	if _, err := js.AddStream(&MemoryBasedStreamConfig); err != nil {
 		return nil, errors.Annotate(err, "failed to create memory based stream")
 	}
 
 	return &service{
 		conn: conn,
 		store: &store.CdcStore{
-			Meta:   store.NewMetaStore(conn),
-			Chunks: store.NewChunkStore(conn),
+			Meta:   NewMetaStore(conn),
+			Chunks: NewChunkStore(conn),
 		},
 	}, nil
 }
@@ -45,6 +45,9 @@ type service struct {
 }
 
 func (s *service) Stat(ctx context.Context, request *capb.StatBlobRequest) (*capb.BlobMeta, error) {
+	l := log.WithPrefix("blob.stat")
+	l.Debug("executing", "digest", store.Digest(request.GetDigest()))
+
 	digest := store.Digest(request.Digest)
 	ok, err := s.store.Stat(digest, ctx)
 	if err != nil {
@@ -58,6 +61,8 @@ func (s *service) Stat(ctx context.Context, request *capb.StatBlobRequest) (*cap
 }
 
 func (s *service) Read(request *capb.ReadBlobRequest, server capb.BlobService_ReadServer) error {
+	l := log.WithPrefix("blob.read")
+
 	ctx, cancel := context.WithCancel(server.Context())
 	defer cancel()
 
@@ -67,7 +72,7 @@ func (s *service) Read(request *capb.ReadBlobRequest, server capb.BlobService_Re
 	if err == store.ErrKeyNotFound {
 		return status.Errorf(codes.NotFound, "blob not found: %v", digest)
 	} else if err != nil {
-		log.Error("failed to get blob", "digest", digest, "error", err)
+		l.Error("failed to get blob", "digest", digest, "error", err)
 		return status.Error(codes.Internal, "internal error")
 	}
 
@@ -80,14 +85,14 @@ func (s *service) Read(request *capb.ReadBlobRequest, server capb.BlobService_Re
 			_ = reader.Close()
 			break
 		} else if err != nil {
-			log.Errorf("failed to read next chunk: %v", err)
+			l.Errorf("failed to read next chunk: %v", err)
 			return status.Error(codes.Internal, "internal error")
 		}
 
 		if err = server.Send(&capb.BlobChunk{
 			Data: sendBuf[:n],
 		}); err != nil {
-			log.Errorf("failed to send blob chunk to client: %v", err)
+			l.Errorf("failed to send blob chunk to client: %v", err)
 			return err
 		}
 	}
@@ -96,6 +101,8 @@ func (s *service) Read(request *capb.ReadBlobRequest, server capb.BlobService_Re
 }
 
 func (s *service) Put(server capb.BlobService_PutServer) (err error) {
+	l := log.WithPrefix("blob.put")
+
 	ctx, cancel := context.WithCancel(server.Context())
 	defer cancel()
 
@@ -103,7 +110,7 @@ func (s *service) Put(server capb.BlobService_PutServer) (err error) {
 
 	digest, err := s.store.Put(&reader, ctx)
 	if err != nil {
-		log.Error("failed to put blob", "error", err)
+		l.Error("failed to put blob", "error", err)
 		return status.Error(codes.Internal, "internal error")
 	}
 

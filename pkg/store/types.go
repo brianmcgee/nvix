@@ -2,12 +2,12 @@ package store
 
 import (
 	"context"
+	"encoding/base64"
 	"io"
 
 	"github.com/nats-io/nats.go"
 
 	"github.com/juju/errors"
-	"github.com/nix-community/go-nix/pkg/nixbase32"
 )
 
 const (
@@ -17,7 +17,7 @@ const (
 type Digest [32]byte
 
 func (d Digest) String() string {
-	return nixbase32.EncodeToString(d[:])
+	return base64.StdEncoding.EncodeToString(d[:])
 }
 
 type Store interface {

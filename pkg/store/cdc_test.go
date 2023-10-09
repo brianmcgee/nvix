@@ -7,6 +7,8 @@ import (
 	"math/rand"
 	"testing"
 
+	"github.com/brianmcgee/nvix/pkg/subject"
+
 	"github.com/nats-io/nats.go"
 	"github.com/stretchr/testify/assert"
 
@@ -15,6 +17,92 @@ import (
 	"github.com/brianmcgee/nvix/pkg/test"
 	"github.com/inhies/go-bytesize"
 )
+
+var (
+	DiskBasedStreamConfig = nats.StreamConfig{
+		Name: "blob_store",
+		Subjects: []string{
+			subject.WithPrefix("STORE.BLOB.*"),
+			subject.WithPrefix("STORE.CHUNK.*"),
+		},
+		Replicas:          1,
+		Discard:           nats.DiscardOld,
+		MaxMsgsPerSubject: 1,
+		Storage:           nats.FileStorage,
+		AllowRollup:       true,
+		AllowDirect:       true,
+		Compression:       nats.S2Compression,
+		// automatically publish into the cache topic
+		RePublish: &nats.RePublish{
+			Source:      subject.WithPrefix("STORE.*.*"),
+			Destination: subject.WithPrefix("CACHE.{{wildcard(1)}}.{{wildcard(2)}}"),
+		},
+	}
+
+	MemoryBasedStreamConfig = nats.StreamConfig{
+		Name: "blob_cache",
+		Subjects: []string{
+			subject.WithPrefix("CACHE.BLOB.*"),
+			subject.WithPrefix("CACHE.CHUNK.*"),
+		},
+		Replicas:          1,
+		Discard:           nats.DiscardOld,
+		MaxMsgsPerSubject: 1,
+		Storage:           nats.MemoryStorage,
+		AllowRollup:       true,
+		AllowDirect:       true,
+	}
+)
+
+func newChunkStore(conn *nats.Conn) Store {
+	diskPrefix := DiskBasedStreamConfig.Subjects[1]
+	diskPrefix = diskPrefix[:len(diskPrefix)-2]
+
+	memoryPrefix := MemoryBasedStreamConfig.Subjects[1]
+	memoryPrefix = memoryPrefix[:len(memoryPrefix)-2]
+
+	disk := &NatsStore{
+		Conn:          conn,
+		StreamConfig:  &DiskBasedStreamConfig,
+		SubjectPrefix: diskPrefix,
+	}
+
+	memory := &NatsStore{
+		Conn:          conn,
+		StreamConfig:  &MemoryBasedStreamConfig,
+		SubjectPrefix: memoryPrefix,
+	}
+
+	return &CachingStore{
+		Disk:   disk,
+		Memory: memory,
+	}
+}
+
+func newMetaStore(conn *nats.Conn) Store {
+	diskPrefix := DiskBasedStreamConfig.Subjects[0]
+	diskPrefix = diskPrefix[:len(diskPrefix)-2]
+
+	memoryPrefix := MemoryBasedStreamConfig.Subjects[0]
+	memoryPrefix = memoryPrefix[:len(memoryPrefix)-2]
+
+	disk := &NatsStore{
+		Conn:          conn,
+		StreamConfig:  &DiskBasedStreamConfig,
+		SubjectPrefix: diskPrefix,
+	}
+
+	memory := &NatsStore{
+		Conn:          conn,
+		StreamConfig:  &MemoryBasedStreamConfig,
+		SubjectPrefix: memoryPrefix,
+	}
+
+	return &CachingStore{
+		Disk:   disk,
+		Memory: memory,
+	}
+}
 
 func newCdcStore(t test.TestingT, conn *nats.Conn, js nats.JetStreamContext) *CdcStore {
 	if _, err := js.AddStream(&DiskBasedStreamConfig); err != nil {
@@ -26,8 +114,8 @@ func newCdcStore(t test.TestingT, conn *nats.Conn, js nats.JetStreamContext) *Cd
 	}
 
 	return &CdcStore{
-		Meta:   NewMetaStore(conn),
-		Chunks: NewChunkStore(conn),
+		Meta:   newMetaStore(conn),
+		Chunks: newChunkStore(conn),
 	}
 }
 

@@ -25,7 +25,8 @@
         }
         {
           name = "DIRECTORY_SERVICE_ADDR";
-          eval = "sled://$TVIX_HOME/store/directory";
+          value = "grpc+http://localhost:5000";
+          #          eval = "sled://$TVIX_HOME/store/directory";
         }
         {
           name = "TVIX_MOUNT_DIR";

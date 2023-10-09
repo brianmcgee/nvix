@@ -6,6 +6,8 @@ import (
 	"runtime/debug"
 	"syscall"
 
+	"github.com/brianmcgee/nvix/pkg/directory"
+
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/recovery"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
@@ -28,13 +30,15 @@ import (
 
 type Run struct {
 	NatsUrl         string `short:"n" env:"NVIX_STORE_NATS_URL" default:"nats://localhost:4222"`
-	NatsCredentials string `short:"c" env:"NVIX_STORE_NATS_CREDENTIALS_FILE" required:""`
+	NatsCredentials string `short:"c" env:"NVIX_STORE_NATS_CREDENTIALS_FILE" required:"" type:"path"`
 
 	ListenAddr  string `short:"l" env:"NVIX_STORE_LISTEN_ADDR" default:"localhost:5000"`
 	MetricsAddr string `short:"m" env:"NVIX_STORE_METRICS_ADDR" default:"localhost:5050"`
 }
 
 func (r *Run) Run() error {
+	log.SetLevel(log.DebugLevel)
+
 	log.Debug("connecting to NATS", "url", r.NatsUrl, "creds", r.NatsCredentials)
 
 	conn, err := nats.Connect(r.NatsUrl, nats.UserCredentials(r.NatsCredentials))
@@ -42,9 +46,14 @@ func (r *Run) Run() error {
 		log.Fatalf("failed to connect to nats: %v", err)
 	}
 
-	service, err := blob.NewService(conn)
+	blobService, err := blob.NewService(conn)
 	if err != nil {
-		log.Fatalf("failed to create blob service")
+		log.Fatalf("failed to create blob service: %v", err)
+	}
+
+	directoryService, err := directory.NewService(conn)
+	if err != nil {
+		log.Fatalf("failed to create directory service: %v", err)
 	}
 
 	// setup metrics
@@ -66,7 +75,7 @@ func (r *Run) Run() error {
 	})
 	grpcPanicRecoveryHandler := func(p any) (err error) {
 		panicsTotal.Inc()
-		rpcLogger.Error("recovered from panic", "panic", p, "stack", debug.Stack())
+		rpcLogger.Error("recovered from panic", "panic", p, "stack", string(debug.Stack()))
 		return status.Errorf(codes.Internal, "%s", p)
 	}
 
@@ -86,7 +95,8 @@ func (r *Run) Run() error {
 	}
 
 	grpcServer := grpc.NewServer(opts...)
-	pb.RegisterBlobServiceServer(grpcServer, service)
+	pb.RegisterBlobServiceServer(grpcServer, blobService)
+	pb.RegisterDirectoryServiceServer(grpcServer, directoryService)
 
 	srvMetrics.InitializeMetrics(grpcServer)
 
