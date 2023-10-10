@@ -14,7 +14,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-func NewService(conn *nats.Conn) (capb.BlobServiceServer, error) {
+func NewServer(conn *nats.Conn) (*Server, error) {
 	js, err := conn.JetStream()
 	if err != nil {
 		return nil, errors.Annotate(err, "failed to create a JetStream context")
@@ -28,7 +28,7 @@ func NewService(conn *nats.Conn) (capb.BlobServiceServer, error) {
 		return nil, errors.Annotate(err, "failed to create memory based stream")
 	}
 
-	return &service{
+	return &Server{
 		conn: conn,
 		store: &store.CdcStore{
 			Meta:   NewMetaStore(conn),
@@ -37,14 +37,14 @@ func NewService(conn *nats.Conn) (capb.BlobServiceServer, error) {
 	}, nil
 }
 
-type service struct {
+type Server struct {
 	capb.UnimplementedBlobServiceServer
 	conn *nats.Conn
 
 	store *store.CdcStore
 }
 
-func (s *service) Stat(ctx context.Context, request *capb.StatBlobRequest) (*capb.BlobMeta, error) {
+func (s *Server) Stat(ctx context.Context, request *capb.StatBlobRequest) (*capb.BlobMeta, error) {
 	l := log.WithPrefix("blob.stat")
 	l.Debug("executing", "digest", store.Digest(request.GetDigest()))
 
@@ -60,7 +60,7 @@ func (s *service) Stat(ctx context.Context, request *capb.StatBlobRequest) (*cap
 	return &capb.BlobMeta{}, nil
 }
 
-func (s *service) Read(request *capb.ReadBlobRequest, server capb.BlobService_ReadServer) error {
+func (s *Server) Read(request *capb.ReadBlobRequest, server capb.BlobService_ReadServer) error {
 	l := log.WithPrefix("blob.read")
 
 	ctx, cancel := context.WithCancel(server.Context())
@@ -100,7 +100,11 @@ func (s *service) Read(request *capb.ReadBlobRequest, server capb.BlobService_Re
 	return nil
 }
 
-func (s *service) Put(server capb.BlobService_PutServer) (err error) {
+func (s *Server) GetByDigest(digest store.Digest, ctx context.Context) (io.ReadCloser, error) {
+	return s.store.Get(digest, ctx)
+}
+
+func (s *Server) Put(server capb.BlobService_PutServer) (err error) {
 	l := log.WithPrefix("blob.put")
 
 	ctx, cancel := context.WithCancel(server.Context())

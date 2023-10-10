@@ -80,6 +80,7 @@ func (c *CdcStore) Get(digest Digest, ctx context.Context) (io.ReadCloser, error
 }
 
 func (c *CdcStore) Put(reader io.ReadCloser, ctx context.Context) (*Digest, error) {
+
 	hasher := blake3.New(32, nil)
 	chunkHasher := blake3.New(32, nil)
 

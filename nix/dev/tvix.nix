@@ -21,7 +21,8 @@
         }
         {
           name = "PATH_INFO_SERVICE_ADDR";
-          eval = "sled://$TVIX_HOME/store/path-info";
+#          eval = "sled://$TVIX_HOME/store/path-info";
+          value = "grpc+http://localhost:5000";
         }
         {
           name = "DIRECTORY_SERVICE_ADDR";
