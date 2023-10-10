@@ -5,6 +5,8 @@ import (
 	"context"
 	"io"
 
+	"github.com/brianmcgee/nvix/pkg/util"
+
 	"github.com/nats-io/nats.go"
 
 	"github.com/charmbracelet/log"
@@ -13,6 +15,10 @@ import (
 type CachingStore struct {
 	Disk   Store
 	Memory Store
+}
+
+func (c *CachingStore) List(ctx context.Context) (util.Iterator[io.ReadCloser], error) {
+	return c.Disk.List(ctx)
 }
 
 func (c *CachingStore) Stat(key string, ctx context.Context) (ok bool, err error) {

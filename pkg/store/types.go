@@ -5,6 +5,8 @@ import (
 	"encoding/base64"
 	"io"
 
+	"github.com/brianmcgee/nvix/pkg/util"
+
 	"github.com/nats-io/nats.go"
 
 	"github.com/juju/errors"
@@ -24,6 +26,7 @@ type Store interface {
 	Get(key string, ctx context.Context) (io.ReadCloser, error)
 	Put(key string, reader io.ReadCloser, ctx context.Context) error
 	PutAsync(key string, reader io.ReadCloser, ctx context.Context) (nats.PubAckFuture, error)
+	List(ctx context.Context) (util.Iterator[io.ReadCloser], error)
 	Stat(key string, ctx context.Context) (bool, error)
 	Delete(key string, ctx context.Context) error
 }

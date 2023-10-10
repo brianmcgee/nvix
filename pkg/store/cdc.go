@@ -5,6 +5,7 @@ import (
 	"context"
 	"io"
 
+	"github.com/brianmcgee/nvix/pkg/util"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/nats-io/nats.go"
@@ -51,6 +52,18 @@ func (c *CdcStore) getMeta(key string, ctx context.Context) (*pb.BlobMeta, error
 		return nil, errors.Annotate(err, "failed to unmarshal blob metadata")
 	}
 	return &meta, nil
+}
+
+func (c *CdcStore) List(ctx context.Context) (util.Iterator[io.ReadCloser], error) {
+	metaIterator, err := c.Meta.List(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return &blobIterator{
+		ctx:          ctx,
+		chunks:       c.Chunks,
+		metaIterator: metaIterator,
+	}, nil
 }
 
 func (c *CdcStore) Stat(digest Digest, ctx context.Context) (ok bool, err error) {
@@ -154,6 +167,42 @@ func (c *CdcStore) Delete(digest Digest, ctx context.Context) error {
 	}
 
 	return nil
+}
+
+type blobIterator struct {
+	ctx          context.Context
+	chunks       Store
+	metaIterator util.Iterator[io.ReadCloser]
+}
+
+func (b *blobIterator) Next() (io.ReadCloser, error) {
+	metaReader, err := b.metaIterator.Next()
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		_ = metaReader.Close()
+	}()
+
+	metaBytes, err := io.ReadAll(metaReader)
+	if err != nil {
+		return nil, errors.Annotate(err, "failed to read blob metadata")
+	}
+
+	var meta pb.BlobMeta
+	if err = proto.Unmarshal(metaBytes, &meta); err != nil {
+		return nil, err
+	}
+
+	return &blobReader{
+		blob:  &meta,
+		store: b.chunks,
+		ctx:   b.ctx,
+	}, nil
+}
+
+func (b *blobIterator) Close() error {
+	return b.metaIterator.Close()
 }
 
 type blobReader struct {

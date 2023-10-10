@@ -4,6 +4,9 @@ import (
 	"bytes"
 	"context"
 	"io"
+	"time"
+
+	"github.com/brianmcgee/nvix/pkg/util"
 
 	"github.com/juju/errors"
 	"github.com/nats-io/nats.go"
@@ -96,6 +99,23 @@ func (n *NatsStore) Delete(key string, ctx context.Context) error {
 	})
 }
 
+func (n *NatsStore) List(ctx context.Context) (util.Iterator[io.ReadCloser], error) {
+	js, err := n.js(ctx)
+	if err != nil {
+		return nil, err
+	}
+	sub, err := js.SubscribeSync(n.subject("*"), nats.DeliverAll())
+	if err != nil {
+		return nil, err
+	}
+	return &natsIterator{
+		ctx:          ctx,
+		sub:          sub,
+		fetchTimeout: 5 * time.Second,
+		numPending:   1,
+	}, nil
+}
+
 func (n *NatsStore) js(_ context.Context) (nats.JetStreamContext, error) {
 	// todo potentially extract js from ctx
 	js, err := n.Conn.JetStream(nats.DirectGet())
@@ -103,6 +123,49 @@ func (n *NatsStore) js(_ context.Context) (nats.JetStreamContext, error) {
 		err = errors.Annotate(err, "failed to create js context")
 	}
 	return js, err
+}
+
+type natsIterator struct {
+	ctx          context.Context
+	sub          *nats.Subscription
+	fetchTimeout time.Duration
+
+	numPending uint64
+}
+
+func (n *natsIterator) Next() (io.ReadCloser, error) {
+	if n.numPending == 0 {
+		// we have caught up
+		return nil, io.EOF
+	}
+
+	select {
+	case <-n.ctx.Done():
+		return nil, n.ctx.Err()
+	default:
+		ctx, cancel := context.WithTimeout(n.ctx, n.fetchTimeout)
+		defer cancel()
+
+		msg, err := n.sub.NextMsgWithContext(ctx)
+		if err != nil {
+			return nil, err
+		}
+
+		meta, err := msg.Metadata()
+		if err != nil {
+			return nil, errors.Annotate(err, "failed to get msg metadata")
+		}
+
+		n.numPending = meta.NumPending
+
+		return &natsMsgReader{
+			reader: bytes.NewReader(msg.Data),
+		}, nil
+	}
+}
+
+func (n *natsIterator) Close() error {
+	return n.sub.Unsubscribe()
 }
 
 type natsMsgReader struct {
@@ -115,7 +178,7 @@ type natsMsgReader struct {
 }
 
 func (r *natsMsgReader) Read(p []byte) (n int, err error) {
-	if r.msg == nil {
+	if r.reader == nil && r.msg == nil {
 		r.msg, err = r.js.GetLastMsg(r.stream, r.subject)
 		if err == nats.ErrMsgNotFound {
 			return 0, ErrKeyNotFound
