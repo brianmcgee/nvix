@@ -6,8 +6,8 @@ import (
 )
 
 type NatsOptions struct {
-	NatsUrl         string `short:"n" env:"NVIX_STORE_NATS_URL" default:"nats://localhost:4222"`
-	NatsCredentials string `short:"c" env:"NVIX_STORE_NATS_CREDENTIALS_FILE" required:"" type:"path"`
+	NatsUrl         string `short:"n" env:"NATS_URL" default:"nats://localhost:4222"`
+	NatsCredentials string `short:"c" env:"NATS_CREDENTIALS_FILE" required:"" type:"path"`
 }
 
 func (no *NatsOptions) Connect() *nats.Conn {

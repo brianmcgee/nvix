@@ -9,7 +9,7 @@
           };
           working_dir = "$PRJ_DATA_DIR";
           environment = {
-            NVIX_STORE_NATS_CREDENTIALS_FILE = "./nsc/creds/Tvix/Store/Admin.creds";
+            NATS_CREDENTIALS_FILE = "./nsc/creds/Tvix/Store/Admin.creds";
           };
           command = "${lib.getExe self'.packages.nvix} store init -v";
         };
@@ -19,7 +19,7 @@
           };
           working_dir = "$PRJ_DATA_DIR";
           environment = {
-            NVIX_STORE_NATS_CREDENTIALS_FILE = "./nsc/creds/Tvix/Store/Server.creds";
+            NATS_CREDENTIALS_FILE = "./nsc/creds/Tvix/Store/Server.creds";
           };
           command = "${lib.getExe self'.packages.nvix} store run -v";
           # TODO readiness probe

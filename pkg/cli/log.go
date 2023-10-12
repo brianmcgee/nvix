@@ -5,7 +5,7 @@ import (
 )
 
 type LogOptions struct {
-	Verbosity int `name:"verbose" short:"v" type:"counter" default:"0" env:"NVIX_LOG_LEVEL" help:"Set the verbosity of logs e.g. -vv"`
+	Verbosity int `name:"verbose" short:"v" type:"counter" default:"0" env:"LOG_LEVEL" help:"Set the verbosity of logs e.g. -vv"`
 }
 
 func (lo *LogOptions) ConfigureLogger() {

@@ -35,8 +35,8 @@ type Run struct {
 	Log  cli.LogOptions  `embed:""`
 	Nats cli.NatsOptions `embed:""`
 
-	ListenAddr  string `short:"l" env:"NVIX_STORE_LISTEN_ADDR" default:"localhost:5000"`
-	MetricsAddr string `short:"m" env:"NVIX_STORE_METRICS_ADDR" default:"localhost:5050"`
+	ListenAddr  string `short:"l" env:"LISTEN_ADDR" default:"localhost:5000"`
+	MetricsAddr string `short:"m" env:"METRICS_ADDR" default:"localhost:5050"`
 }
 
 func (r *Run) Run() error {

@@ -42,6 +42,7 @@
     } {
       imports = [
         ./nix
+        ./nixos
       ];
       systems = [
         "x86_64-linux"
