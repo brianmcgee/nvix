@@ -1,6 +1,7 @@
 package store
 
 import (
+	"google.golang.org/grpc/reflection"
 	"net"
 	"net/http"
 	"runtime/debug"
@@ -101,6 +102,9 @@ func (r *Run) Run() error {
 	pb.RegisterBlobServiceServer(grpcServer, blobServer)
 	pb.RegisterDirectoryServiceServer(grpcServer, directoryServer)
 	tvpb.RegisterPathInfoServiceServer(grpcServer, pathInfoServer)
+
+	// register for reflection to help with cli tools
+	reflection.Register(grpcServer)
 
 	srvMetrics.InitializeMetrics(grpcServer)
 
