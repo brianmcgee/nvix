@@ -6,6 +6,8 @@ import (
 	"runtime/debug"
 	"syscall"
 
+	"github.com/brianmcgee/nvix/pkg/cli"
+
 	tvpb "code.tvl.fyi/tvix/store/protos"
 	"github.com/brianmcgee/nvix/pkg/pathinfo"
 
@@ -32,6 +34,8 @@ import (
 )
 
 type Run struct {
+	Log cli.LogOptions `embed:"" short:"v"`
+
 	NatsUrl         string `short:"n" env:"NVIX_STORE_NATS_URL" default:"nats://localhost:4222"`
 	NatsCredentials string `short:"c" env:"NVIX_STORE_NATS_CREDENTIALS_FILE" required:"" type:"path"`
 
@@ -40,9 +44,7 @@ type Run struct {
 }
 
 func (r *Run) Run() error {
-	log.SetLevel(log.DebugLevel)
-
-	log.Debug("connecting to NATS", "url", r.NatsUrl, "creds", r.NatsCredentials)
+	r.Log.ConfigureLogger()
 
 	conn, err := nats.Connect(r.NatsUrl, nats.UserCredentials(r.NatsCredentials))
 	if err != nil {
