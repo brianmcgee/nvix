@@ -18,7 +18,7 @@ import (
 	"github.com/nats-io/nats.go"
 )
 
-func NewService(conn *nats.Conn) (capb.DirectoryServiceServer, error) {
+func NewServer(conn *nats.Conn) (*Server, error) {
 	js, err := conn.JetStream()
 	if err != nil {
 		return nil, errors.Annotate(err, "failed to create a JetStream context")
@@ -32,24 +32,19 @@ func NewService(conn *nats.Conn) (capb.DirectoryServiceServer, error) {
 		return nil, errors.Annotate(err, "failed to create memory based stream")
 	}
 
-	return &service{
+	return &Server{
 		conn:  conn,
 		store: NewDirectoryStore(conn),
 	}, nil
 }
 
-type service struct {
+type Server struct {
 	capb.UnimplementedDirectoryServiceServer
 	conn  *nats.Conn
 	store store.Store
 }
 
-// Get retrieves a stream of Directory messages, by using the lookup
-// parameters in GetDirectoryRequest.
-// Keep in mind multiple DirectoryNodes in different parts of the graph might
-// have the same digest if they have the same underlying contents,
-// so sending subsequent ones can be omitted.
-func (s *service) Get(req *capb.GetDirectoryRequest, server capb.DirectoryService_GetServer) error {
+func (s *Server) Get(req *capb.GetDirectoryRequest, server capb.DirectoryService_GetServer) error {
 	l := log.WithPrefix("directory.get")
 
 	rootDigest := store.Digest(req.GetDigest())
@@ -58,32 +53,9 @@ func (s *service) Get(req *capb.GetDirectoryRequest, server capb.DirectoryServic
 	ctx, cancel := context.WithCancel(server.Context())
 	defer cancel()
 
-	fetch := func(digest store.Digest) (*capb.Directory, error) {
-		reader, err := s.store.Get(digest.String(), ctx)
-		if err != nil {
-			l.Errorf("failure: %v", err)
-			return nil, status.Errorf(codes.NotFound, "digest not found: %v", digest)
-		}
-		defer func() {
-			_ = reader.Close()
-		}()
-
-		b, err := io.ReadAll(reader)
-		if err != nil {
-			l.Errorf("failure: %v", err)
-			return nil, status.Error(codes.Internal, "failed to read directory entry from store")
-		}
-		var dir capb.Directory
-		if err = proto.Unmarshal(b, &dir); err != nil {
-			l.Errorf("failure: %v", err)
-			return nil, status.Error(codes.Internal, "failed to unmarshal directory entry from store")
-		}
-		return &dir, nil
-	}
-
 	// todo handle get by what
 
-	rootDirectory, err := fetch(rootDigest)
+	rootDirectory, err := s.GetByDigest(rootDigest, ctx)
 	if err != nil {
 		l.Errorf("failure: %v", err)
 		return status.Errorf(codes.NotFound, "directory not found: %v", rootDigest)
@@ -94,7 +66,7 @@ func (s *service) Get(req *capb.GetDirectoryRequest, server capb.DirectoryServic
 	iterateDirs := func(directory *capb.Directory) error {
 		for _, dir := range directory.Directories {
 			digest := store.Digest(dir.Digest)
-			if d, err := fetch(digest); err != nil {
+			if d, err := s.GetByDigest(digest, ctx); err != nil {
 				return err
 			} else if req.Recursive {
 				dirs = append(dirs, d)
@@ -118,16 +90,32 @@ func (s *service) Get(req *capb.GetDirectoryRequest, server capb.DirectoryServic
 	return nil
 }
 
-// Put uploads a graph of Directory messages.
-// Individual Directory messages need to be send in an order walking up
-// from the leaves to the root - a Directory message can only refer to
-// Directory messages previously sent in the same stream.
-// Keep in mind multiple DirectoryNodes in different parts of the graph might
-// have the same digest if they have the same underlying contents,
-// so sending subsequent ones can be omitted.
-// We might add a separate method, allowing to send partial graphs at a later
-// time, if requiring to send the full graph turns out to be a problem.
-func (s *service) Put(server capb.DirectoryService_PutServer) error {
+func (s *Server) GetByDigest(digest store.Digest, ctx context.Context) (*capb.Directory, error) {
+	l := log.WithPrefix("directory.getByDigest")
+
+	reader, err := s.store.Get(digest.String(), ctx)
+	if err != nil {
+		l.Errorf("failure: %v", err)
+		return nil, status.Errorf(codes.NotFound, "digest not found: %v", digest)
+	}
+	defer func() {
+		_ = reader.Close()
+	}()
+
+	b, err := io.ReadAll(reader)
+	if err != nil {
+		l.Errorf("failure: %v", err)
+		return nil, status.Error(codes.Internal, "failed to read directory entry from store")
+	}
+	var dir capb.Directory
+	if err = proto.Unmarshal(b, &dir); err != nil {
+		l.Errorf("failure: %v", err)
+		return nil, status.Error(codes.Internal, "failed to unmarshal directory entry from store")
+	}
+	return &dir, nil
+}
+
+func (s *Server) Put(server capb.DirectoryService_PutServer) error {
 	l := log.WithPrefix("directory.put")
 
 	ctx, cancel := context.WithCancel(server.Context())
@@ -204,6 +192,6 @@ func (s *service) Put(server capb.DirectoryService_PutServer) error {
 		l.Error("failed to send put response", "err", err)
 	}
 
-	l.Debug("finished")
+	l.Debug("finished", "digest", store.Digest(rootDigest).String())
 	return nil
 }

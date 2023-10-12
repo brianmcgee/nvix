@@ -119,6 +119,59 @@ func newCdcStore(t test.TestingT, conn *nats.Conn, js nats.JetStreamContext) *Cd
 	}
 }
 
+func TestCdcStore_List(t *testing.T) {
+	as := assert.New(t)
+
+	s := test.RunBasicJetStreamServer(t)
+	defer test.ShutdownJSServerAndRemoveStorage(t, s)
+
+	conn, js := test.JsClient(t, s)
+
+	js, err := conn.JetStream()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	store := newCdcStore(t, conn, js)
+	rng := rand.New(rand.NewSource(1))
+
+	digests := make(map[string]bool)
+
+	writeCount := 10
+	for i := 0; i < writeCount; i++ {
+		data := make([]byte, 8*1024*1024)
+		rng.Read(data)
+
+		digest, err := store.Put(io.NopCloser(bytes.NewReader(data)), context.Background())
+		as.Nil(err)
+
+		digests[digest.String()] = true
+	}
+
+	iter, err := store.List(context.Background())
+	as.Nil(err)
+
+	readCount := 0
+	for {
+		reader, err := iter.Next()
+		if err == io.EOF {
+			break
+		}
+
+		hasher := blake3.New(32, nil)
+		as.Nil(err)
+
+		_, err = io.Copy(hasher, reader)
+		as.Nil(err)
+
+		blobDigest := Digest(hasher.Sum(nil))
+		as.True(digests[blobDigest.String()])
+		readCount += 1
+	}
+
+	as.Equal(writeCount, readCount)
+}
+
 func TestCdcStore_PutAndGet(t *testing.T) {
 	as := assert.New(t)
 

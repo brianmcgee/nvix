@@ -6,6 +6,9 @@ import (
 	"runtime/debug"
 	"syscall"
 
+	tvpb "code.tvl.fyi/tvix/store/protos"
+	"github.com/brianmcgee/nvix/pkg/pathinfo"
+
 	"github.com/brianmcgee/nvix/pkg/directory"
 
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/recovery"
@@ -46,14 +49,19 @@ func (r *Run) Run() error {
 		log.Fatalf("failed to connect to nats: %v", err)
 	}
 
-	blobService, err := blob.NewService(conn)
+	blobServer, err := blob.NewServer(conn)
 	if err != nil {
 		log.Fatalf("failed to create blob service: %v", err)
 	}
 
-	directoryService, err := directory.NewService(conn)
+	directoryServer, err := directory.NewServer(conn)
 	if err != nil {
 		log.Fatalf("failed to create directory service: %v", err)
+	}
+
+	pathInfoServer, err := pathinfo.NewServer(conn, blobServer, directoryServer)
+	if err != nil {
+		log.Fatalf("failed to create path info service: %v", err)
 	}
 
 	// setup metrics
@@ -95,8 +103,9 @@ func (r *Run) Run() error {
 	}
 
 	grpcServer := grpc.NewServer(opts...)
-	pb.RegisterBlobServiceServer(grpcServer, blobService)
-	pb.RegisterDirectoryServiceServer(grpcServer, directoryService)
+	pb.RegisterBlobServiceServer(grpcServer, blobServer)
+	pb.RegisterDirectoryServiceServer(grpcServer, directoryServer)
+	tvpb.RegisterPathInfoServiceServer(grpcServer, pathInfoServer)
 
 	srvMetrics.InitializeMetrics(grpcServer)
 
