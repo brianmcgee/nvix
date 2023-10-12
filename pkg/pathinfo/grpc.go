@@ -13,7 +13,6 @@ import (
 	"github.com/brianmcgee/nvix/pkg/store"
 	"github.com/charmbracelet/log"
 	"github.com/golang/protobuf/proto"
-	"github.com/juju/errors"
 	multihash "github.com/multiformats/go-multihash/core"
 	"github.com/nats-io/nats.go"
 	"github.com/nix-community/go-nix/pkg/hash"
@@ -23,19 +22,6 @@ import (
 )
 
 func NewServer(conn *nats.Conn, blob *blob.Server, directory *directory.Server) (*Service, error) {
-	js, err := conn.JetStream()
-	if err != nil {
-		return nil, errors.Annotate(err, "failed to create a JetStream context")
-	}
-
-	if _, err := js.AddStream(&DiskBasedStreamConfig); err != nil {
-		return nil, errors.Annotate(err, "failed to create disk based stream")
-	}
-
-	if _, err := js.AddStream(&MemoryBasedStreamConfig); err != nil {
-		return nil, errors.Annotate(err, "failed to create memory based stream")
-	}
-
 	return &Service{
 		conn:      conn,
 		store:     NewPathInfoStore(conn),

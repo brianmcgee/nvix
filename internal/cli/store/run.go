@@ -22,10 +22,8 @@ import (
 
 	"github.com/brianmcgee/nvix/pkg/blob"
 
-	grpcprom "github.com/grpc-ecosystem/go-grpc-middleware/providers/prometheus"
-	"github.com/nats-io/nats.go"
-
 	pb "code.tvl.fyi/tvix/castore/protos"
+	grpcprom "github.com/grpc-ecosystem/go-grpc-middleware/providers/prometheus"
 
 	"github.com/charmbracelet/log"
 	"github.com/ztrue/shutdown"
@@ -34,10 +32,8 @@ import (
 )
 
 type Run struct {
-	Log cli.LogOptions `embed:"" short:"v"`
-
-	NatsUrl         string `short:"n" env:"NVIX_STORE_NATS_URL" default:"nats://localhost:4222"`
-	NatsCredentials string `short:"c" env:"NVIX_STORE_NATS_CREDENTIALS_FILE" required:"" type:"path"`
+	Log  cli.LogOptions  `embed:""`
+	Nats cli.NatsOptions `embed:""`
 
 	ListenAddr  string `short:"l" env:"NVIX_STORE_LISTEN_ADDR" default:"localhost:5000"`
 	MetricsAddr string `short:"m" env:"NVIX_STORE_METRICS_ADDR" default:"localhost:5050"`
@@ -46,10 +42,7 @@ type Run struct {
 func (r *Run) Run() error {
 	r.Log.ConfigureLogger()
 
-	conn, err := nats.Connect(r.NatsUrl, nats.UserCredentials(r.NatsCredentials))
-	if err != nil {
-		log.Fatalf("failed to connect to nats: %v", err)
-	}
+	conn := r.Nats.Connect()
 
 	blobServer, err := blob.NewServer(conn)
 	if err != nil {

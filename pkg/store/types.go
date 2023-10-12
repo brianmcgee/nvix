@@ -23,6 +23,7 @@ func (d Digest) String() string {
 }
 
 type Store interface {
+	Init(ctx context.Context) error
 	Get(key string, ctx context.Context) (io.ReadCloser, error)
 	Put(key string, reader io.ReadCloser, ctx context.Context) error
 	PutAsync(key string, reader io.ReadCloser, ctx context.Context) (nats.PubAckFuture, error)

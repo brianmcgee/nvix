@@ -43,7 +43,16 @@ var sizes = []bytesize.ByteSize{
 func blobServer(s *server.Server, t test.TestingT) (*grpc.Server, net.Listener) {
 	t.Helper()
 
-	blobService, err := NewServer(test.NatsConn(t, s))
+	conn := test.NatsConn(t, s)
+
+	ctx := context.Background()
+	if err := NewMetaStore(conn).Init(ctx); err != nil {
+		t.Fatal(err)
+	} else if err := NewChunkStore(conn).Init(ctx); err != nil {
+		t.Fatal(err)
+	}
+
+	blobService, err := NewServer(conn)
 	if err != nil {
 		t.Fatalf("failed to create blob service: %v", err)
 	}

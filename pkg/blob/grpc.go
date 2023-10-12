@@ -8,26 +8,12 @@ import (
 
 	"github.com/brianmcgee/nvix/pkg/store"
 	"github.com/charmbracelet/log"
-	"github.com/juju/errors"
 	"github.com/nats-io/nats.go"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
 func NewServer(conn *nats.Conn) (*Server, error) {
-	js, err := conn.JetStream()
-	if err != nil {
-		return nil, errors.Annotate(err, "failed to create a JetStream context")
-	}
-
-	if _, err := js.AddStream(&DiskBasedStreamConfig); err != nil {
-		return nil, errors.Annotate(err, "failed to create disk based stream")
-	}
-
-	if _, err := js.AddStream(&MemoryBasedStreamConfig); err != nil {
-		return nil, errors.Annotate(err, "failed to create memory based stream")
-	}
-
 	return &Server{
 		conn: conn,
 		store: &store.CdcStore{

@@ -17,6 +17,13 @@ type CachingStore struct {
 	Memory Store
 }
 
+func (c *CachingStore) Init(ctx context.Context) error {
+	if err := c.Disk.Init(ctx); err != nil {
+		return err
+	}
+	return c.Memory.Init(ctx)
+}
+
 func (c *CachingStore) List(ctx context.Context) (util.Iterator[io.ReadCloser], error) {
 	return c.Disk.List(ctx)
 }

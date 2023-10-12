@@ -18,6 +18,15 @@ type NatsStore struct {
 	SubjectPrefix string
 }
 
+func (n *NatsStore) Init(ctx context.Context) error {
+	js, err := n.js(ctx)
+	if err != nil {
+		return err
+	}
+	_, err = js.AddStream(n.StreamConfig)
+	return err
+}
+
 func (n *NatsStore) Stat(key string, ctx context.Context) (ok bool, err error) {
 	var reader io.ReadCloser
 	reader, err = n.Get(key, ctx)

@@ -30,6 +30,13 @@ type CdcStore struct {
 	Chunks Store
 }
 
+func (c *CdcStore) Init(ctx context.Context) error {
+	if err := c.Meta.Init(ctx); err != nil {
+		return err
+	}
+	return c.Chunks.Init(ctx)
+}
+
 func (c *CdcStore) getMeta(key string, ctx context.Context) (*pb.BlobMeta, error) {
 	reader, err := c.Meta.Get(key, ctx)
 	if err != nil {
