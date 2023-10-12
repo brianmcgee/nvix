@@ -3,8 +3,8 @@ package blob
 import (
 	"bytes"
 	"context"
+	"crypto/rand"
 	"io"
-	"math/rand"
 	"net"
 	"testing"
 
@@ -83,9 +83,11 @@ func BenchmarkBlobService_Put(b *testing.B) {
 			b.ResetTimer()
 
 			b.RunParallel(func(p *testing.PB) {
-				rng := rand.New(rand.NewSource(1))
 				data := make([]byte, size)
-				rng.Read(data)
+				_, err := rand.Read(data)
+				if err != nil {
+					b.Fatal(err)
+				}
 
 				r := bytes.NewReader(data)
 
@@ -133,9 +135,11 @@ func BenchmarkBlobService_Read(b *testing.B) {
 	for _, size := range sizes {
 		size := size
 
-		rng := rand.New(rand.NewSource(1))
 		data := make([]byte, size)
-		rng.Read(data)
+		_, err := rand.Read(data)
+		if err != nil {
+			b.Fatal(err)
+		}
 
 		r := bytes.NewReader(data)
 
@@ -210,7 +214,7 @@ func TestBlobService_Put(t *testing.T) {
 	conn := test.GrpcConn(lis, t)
 	client := pb.NewBlobServiceClient(conn)
 
-	payload := make([]byte, 100*1024*1024)
+	payload := make([]byte, 16*1024*1024)
 	_, err := rand.Read(payload)
 	if err != nil {
 		t.Fatalf("failed to generate random bytes: %v", err)

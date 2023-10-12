@@ -2,9 +2,12 @@ package pathinfo
 
 import (
 	"bytes"
+	"context"
+	"io"
+
 	capb "code.tvl.fyi/tvix/castore/protos"
 	tvpb "code.tvl.fyi/tvix/store/protos"
-	"context"
+
 	"github.com/brianmcgee/nvix/pkg/blob"
 	"github.com/brianmcgee/nvix/pkg/directory"
 	"github.com/brianmcgee/nvix/pkg/store"
@@ -17,7 +20,6 @@ import (
 	"github.com/nix-community/go-nix/pkg/nixbase32"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"io"
 )
 
 func NewServer(conn *nats.Conn, blob *blob.Server, directory *directory.Server) (*Service, error) {
@@ -76,7 +78,6 @@ func (s *Service) Get(ctx context.Context, req *tvpb.GetPathInfoRequest) (*tvpb.
 	l.Debug("executing", "outHash", outHash)
 
 	reader, err := s.outIdx.Get(outHash, ctx)
-
 	if err != nil {
 		return nil, err
 	}

@@ -12,10 +12,11 @@ It's primary focus is implementing [TVIX](https://cs.tvl.fyi/depot/-/tree/tvix) 
 
 ## Roadmap
 
--   [ ] Store
+-   [x] Store
     -   [x] Blob Service
-    -   [ ] Path Info Service
-    -   [ ] Directory Service
+    -   [x] Path Info Service
+    -   [x] Directory Service
+-   [ ] Improve test coverage
 
 ## Requirements
 

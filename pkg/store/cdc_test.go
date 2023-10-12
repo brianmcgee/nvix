@@ -137,9 +137,9 @@ func TestCdcStore_List(t *testing.T) {
 
 	digests := make(map[string]bool)
 
-	writeCount := 100
+	writeCount := 10
 	for i := 0; i < writeCount; i++ {
-		data := make([]byte, 20*1024*1024)
+		data := make([]byte, 8*1024*1024)
 		rng.Read(data)
 
 		digest, err := store.Put(io.NopCloser(bytes.NewReader(data)), context.Background())

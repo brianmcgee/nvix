@@ -1,12 +1,13 @@
 package store
 
 import (
-	tvpb "code.tvl.fyi/tvix/store/protos"
-	"github.com/brianmcgee/nvix/pkg/pathinfo"
 	"net"
 	"net/http"
 	"runtime/debug"
 	"syscall"
+
+	tvpb "code.tvl.fyi/tvix/store/protos"
+	"github.com/brianmcgee/nvix/pkg/pathinfo"
 
 	"github.com/brianmcgee/nvix/pkg/directory"
 
