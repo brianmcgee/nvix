@@ -36,6 +36,7 @@ var (
 		Replicas:          1,
 		Discard:           nats.DiscardOld,
 		MaxMsgsPerSubject: 1,
+		MaxBytes:          1024 * 1024 * 128, // todo make configurable from cli
 		Storage:           nats.MemoryStorage,
 		AllowRollup:       true,
 		AllowDirect:       true,
