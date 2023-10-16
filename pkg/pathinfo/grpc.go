@@ -113,8 +113,11 @@ func (s *Service) Put(ctx context.Context, pathInfo *tvpb.PathInfo) (*tvpb.PathI
 		return nil, status.Error(codes.Internal, "failed to put path info")
 	}
 
+	// we need to maintain an index of outHash => digest for lookup in Get
+	outputHash := nixbase32.EncodeToString(pathInfo.Narinfo.NarSha256)
+
 	err = s.outIdx.Put(
-		nixbase32.EncodeToString(pathInfo.Narinfo.NarSha256),
+		outputHash,
 		io.NopCloser(bytes.NewReader(digest[:])),
 		ctx,
 	)
