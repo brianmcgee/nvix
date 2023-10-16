@@ -17,6 +17,7 @@ It's primary focus is implementing [TVIX](https://cs.tvl.fyi/depot/-/tree/tvix) 
     -   [x] Path Info Service
     -   [x] Directory Service
 -   [ ] Improve test coverage
+-   [ ] Add more metrics
 
 ## Requirements
 
