@@ -1,11 +1,12 @@
 package store
 
 import (
-	"google.golang.org/grpc/reflection"
 	"net"
 	"net/http"
 	"runtime/debug"
 	"syscall"
+
+	"google.golang.org/grpc/reflection"
 
 	"github.com/brianmcgee/nvix/pkg/cli"
 

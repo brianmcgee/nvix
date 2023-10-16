@@ -71,7 +71,7 @@ in {
         RestartSec = 1;
 
         LoadCredential = [
-            "nats.creds:${cfg.nats.credentialsFile}"
+          "nats.creds:${cfg.nats.credentialsFile}"
         ];
 
         User = "nvix-store";
