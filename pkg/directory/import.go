@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	castorev1 "code.tvl.fyi/tvix/castore/protos"
+
 	"github.com/41north/async.go"
 	"github.com/charmbracelet/log"
 	"golang.org/x/sync/errgroup"
@@ -18,7 +20,7 @@ import (
 func UploadFiles(
 	ctx context.Context,
 	path string,
-	uploadFn func(path string) ([]byte, error),
+	client castorev1.BlobServiceClient,
 ) (map[string]async.Future[[]byte], error) {
 	l := log.WithPrefix("upload_files").With("path", path)
 
@@ -58,12 +60,40 @@ func UploadFiles(
 
 		l.Debug("scheduled upload", "filePath", filePath)
 		eg.Go(func() error {
-			digest, err := uploadFn(filePath)
+			file, err := os.Open(filePath)
 			if err != nil {
 				return err
 			}
 
-			future.Set(digest)
+			// 1Mb chunks
+			chunk := make([]byte, 1024*1024)
+
+			put, err := client.Put(ctx)
+			if err != nil {
+				return err
+			}
+
+			for {
+				n, err := file.Read(chunk)
+				if err == io.EOF {
+					break
+				} else if err != nil {
+					return err
+				}
+
+				if err = put.Send(&castorev1.BlobChunk{
+					Data: chunk[:n],
+				}); err != nil {
+					return err
+				}
+			}
+
+			resp, err := put.CloseAndRecv()
+			if err != nil {
+				return err
+			}
+
+			future.Set(resp.Digest)
 			return nil
 		})
 	}

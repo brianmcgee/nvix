@@ -4,7 +4,6 @@ import (
 	"context"
 	"io"
 	"net"
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -121,45 +120,8 @@ func TestUploadFiles(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	digests, err := UploadFiles(
-		ctx,
-		"../../test/testdata/dfi/canonical",
-		func(path string) ([]byte, error) {
-			file, err := os.Open(path)
-			if err != nil {
-				return nil, err
-			}
-
-			// 1Mb chunks
-			chunk := make([]byte, 1024*1024)
-
-			put, err := client.Put(ctx)
-			if err != nil {
-				return nil, err
-			}
-
-			for {
-				n, err := file.Read(chunk)
-				if err == io.EOF {
-					break
-				} else if err != nil {
-					return nil, err
-				}
-
-				if err = put.Send(&pb.BlobChunk{
-					Data: chunk[:n],
-				}); err != nil {
-					return nil, err
-				}
-			}
-
-			resp, err := put.CloseAndRecv()
-			if err != nil {
-				return nil, err
-			}
-
-			return resp.Digest, nil
-		})
+	rootPath := "../../test/testdata/dfi/canonical"
+	digests, err := UploadFiles(ctx, rootPath, client)
 
 	r.Nil(err)
 	r.NotNil(digests)
@@ -167,7 +129,7 @@ func TestUploadFiles(t *testing.T) {
 	r.Equal(len(canonicalFilePaths), len(digests))
 
 	for _, relPath := range canonicalFilePaths {
-		absPath, err := filepath.Abs("../../test/testdata/dfi/canonical/" + relPath)
+		absPath, err := filepath.Abs(rootPath + "/" + relPath)
 		r.Nil(err)
 
 		future := digests[absPath]
