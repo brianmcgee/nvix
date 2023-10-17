@@ -111,23 +111,21 @@ func (s *Server) Put(server capb.BlobService_PutServer) (err error) {
 
 type blobReader struct {
 	server capb.BlobService_PutServer
-	chunk  []byte
+	chunk  *capb.BlobChunk
 }
 
 func (b *blobReader) Read(p []byte) (n int, err error) {
 	if b.chunk == nil {
-		var chunk *capb.BlobChunk
-		if chunk, err = b.server.Recv(); err != nil {
+		if b.chunk, err = b.server.Recv(); err != nil {
 			return
 		}
-		b.chunk = chunk.Data
 	}
 
-	n = copy(p, b.chunk)
-	if n == len(b.chunk) {
+	n = copy(p, b.chunk.Data)
+	if n == len(b.chunk.Data) {
 		b.chunk = nil
 	} else {
-		b.chunk = b.chunk[n:]
+		b.chunk.Data = b.chunk.Data[n:]
 	}
 
 	return
