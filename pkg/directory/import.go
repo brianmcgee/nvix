@@ -87,12 +87,17 @@ func (i *DirIterator) Next() (os.DirEntry, error) {
 	}
 }
 
-func NewDirIterator(path string, entries []os.DirEntry) DirIterator {
+func NewDirIterator(path string, entries []os.DirEntry) (*DirIterator, error) {
 	// lexicographically sort the entries first
 	slices.SortFunc(entries, func(a, b os.DirEntry) int {
 		return strings.Compare(a.Name(), b.Name())
 	})
-	return DirIterator{path: path, entries: entries}
+	absPath, err := filepath.Abs(path)
+	if err != nil {
+		return nil, err
+	}
+
+	return &DirIterator{path: absPath, entries: entries}, nil
 }
 
 type DepthFirstIterator struct {
@@ -148,8 +153,12 @@ func (i *DepthFirstIterator) Next() (info os.FileInfo, err error) {
 			}
 
 			// create a new dir iterator and append to the stack
-			dirIterator := NewDirIterator(path, dirEntries)
-			i.stack = append(i.stack, &dirIterator)
+			dirIterator, err := NewDirIterator(path, dirEntries)
+			if err != nil {
+				return nil, err
+			}
+
+			i.stack = append(i.stack, dirIterator)
 
 			// try to read in the next loop
 			continue
@@ -172,10 +181,13 @@ func NewDepthFirstIterator(path string) (*DepthFirstIterator, error) {
 		return nil, err
 	}
 
-	dirIterator := NewDirIterator(path, entries)
+	dirIterator, err := NewDirIterator(path, entries)
+	if err != nil {
+		return nil, err
+	}
 
 	return &DepthFirstIterator{
 		root:  path,
-		stack: []*DirIterator{&dirIterator},
+		stack: []*DirIterator{dirIterator},
 	}, nil
 }
