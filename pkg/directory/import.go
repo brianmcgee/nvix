@@ -38,8 +38,13 @@ type DepthFirstIterator struct {
 	stack []*DirIterator
 }
 
-// Dir returns the fully qualified path for the current directory being iterated on.
-// It should be combined with the os.FileInfo.Name() to get the fully qualified path for the os.FileInfo returned by
+// Depth returns the number of subdirectories deep that we have traversed and in which we are currently iterating.
+func (i *DepthFirstIterator) Depth() int {
+	return len(i.stack)
+}
+
+// Dir returns the path of the current directory being iterated on.
+// It should be combined with the os.FileInfo.Name() to get the path for the os.FileInfo returned by
 // DepthFirstIterator.Next().
 func (i *DepthFirstIterator) Dir() string {
 	size := len(i.stack)

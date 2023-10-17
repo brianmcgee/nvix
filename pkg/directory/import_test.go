@@ -13,17 +13,18 @@ var (
 	canonicalEntries = []struct {
 		dir   string
 		name  string
+		depth int
 		isDir bool
 	}{
-		{dir: "./a", name: "c.txt", isDir: false},
-		{dir: "./a", name: "d.txt", isDir: false},
-		{dir: "./a/e", name: "f.txt", isDir: false},
-		{dir: "./a", name: "e", isDir: true},
-		{dir: ".", name: "a", isDir: true},
-		{dir: "./b", name: "g.txt", isDir: false},
-		{dir: "./b", name: "h.txt", isDir: false},
-		{dir: ".", name: "b", isDir: true},
-		{dir: "", name: ".", isDir: true},
+		{dir: "./a", name: "c.txt", depth: 2, isDir: false},
+		{dir: "./a", name: "d.txt", depth: 2, isDir: false},
+		{dir: "./a/e", name: "f.txt", depth: 3, isDir: false},
+		{dir: "./a", name: "e", depth: 2, isDir: true},
+		{dir: ".", name: "a", depth: 1, isDir: true},
+		{dir: "./b", name: "g.txt", depth: 2, isDir: false},
+		{dir: "./b", name: "h.txt", depth: 2, isDir: false},
+		{dir: ".", name: "b", depth: 1, isDir: true},
+		{dir: "", name: ".", depth: 0, isDir: true},
 	}
 )
 
