@@ -1,13 +1,75 @@
 package directory
 
 import (
+	"context"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
+
+	"github.com/41north/async.go"
+	"github.com/charmbracelet/log"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/juju/errors"
 	"golang.org/x/exp/slices"
 )
+
+func UploadFiles(
+	ctx context.Context,
+	path string,
+	uploadFn func(path string) ([]byte, error),
+) (map[string]async.Future[[]byte], error) {
+	l := log.WithPrefix("upload_files").With("path", path)
+
+	digests := make(map[string]async.Future[[]byte])
+
+	eg, ctx := errgroup.WithContext(ctx)
+	eg.SetLimit(8) // todo make configurable
+
+	iterator, err := NewDepthFirstIterator(path)
+	if err != nil {
+		return nil, err
+	}
+
+	for {
+		info, err := iterator.Next()
+		if err == io.EOF {
+			break
+		} else if err != nil {
+			return nil, err
+		}
+
+		filePath, err := filepath.Abs(iterator.Dir() + "/" + info.Name())
+		if err != nil {
+			return nil, err
+		}
+
+		if info.IsDir() {
+			l.Debug("skipping directory", "filePath", filePath)
+			continue
+		} else if (info.Mode() & os.ModeSymlink) != 0 {
+			l.Debug("skipping symlink", "filePath", filePath)
+			continue
+		}
+
+		future := async.NewFuture[[]byte]()
+		digests[filePath] = future
+
+		l.Debug("scheduled upload", "filePath", filePath)
+		eg.Go(func() error {
+			digest, err := uploadFn(filePath)
+			if err != nil {
+				return err
+			}
+
+			future.Set(digest)
+			return nil
+		})
+	}
+
+	return digests, nil
+}
 
 type DirIterator struct {
 	path    string
