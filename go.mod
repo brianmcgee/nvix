@@ -5,6 +5,7 @@ go 1.20
 require (
 	code.tvl.fyi/tvix/castore/protos v0.0.0-20231014122118-3fc2ade7dfb2
 	code.tvl.fyi/tvix/store/protos v0.0.0-20231014142132-b2dfae6a1028
+	github.com/41north/async.go v0.0.0-20221002090159-6328d6a1e8ba
 	github.com/SaveTheRbtz/fastcdc-go v0.3.0
 	github.com/alecthomas/kong v0.8.1
 	github.com/charmbracelet/log v0.2.5
@@ -21,6 +22,7 @@ require (
 	github.com/prometheus/client_golang v1.17.0
 	github.com/stretchr/testify v1.8.4
 	github.com/ztrue/shutdown v0.1.1
+	golang.org/x/exp v0.0.0-20230905200255-921286631fa9
 	golang.org/x/sync v0.4.0
 	google.golang.org/grpc v1.58.3
 	google.golang.org/protobuf v1.31.0
