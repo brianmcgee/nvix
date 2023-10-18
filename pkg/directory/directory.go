@@ -17,7 +17,6 @@ const (
 	ErrNameWithNullByte        = errors.ConstError("name cannot contain null bytes")
 	ErrNameWithSelfReference   = errors.ConstError("name cannot be a self reference: '.'")
 	ErrNameWithParentReference = errors.ConstError("name cannot be a parent reference: '..'")
-	ErrNamesAreNotSorted       = errors.ConstError("names must be lexicographically sorted")
 )
 
 type DirEntry interface {
@@ -42,7 +41,7 @@ func validateDirectory(directory *capb.Directory) error {
 		if err := validate(string(dir.Name), dir); err != nil {
 			return err
 		} else if len(lastName) > 0 && bytes.Compare(lastName, dir.Name) > 0 {
-			return ErrNamesAreNotSorted
+			return errors.Errorf("directory names must be lexicographically sorted: lastName = '%v', current = '%v'", string(lastName), string(dir.Name))
 		}
 		lastName = dir.Name
 	}
@@ -52,7 +51,7 @@ func validateDirectory(directory *capb.Directory) error {
 		if err := validate(string(file.Name), file); err != nil {
 			return err
 		} else if len(lastName) > 0 && bytes.Compare(lastName, file.Name) > 0 {
-			return ErrNamesAreNotSorted
+			return errors.Errorf("file names must be lexicographically sorted: lastName = '%v', current = '%v'", string(lastName), string(file.Name))
 		}
 		lastName = file.Name
 	}
@@ -62,7 +61,7 @@ func validateDirectory(directory *capb.Directory) error {
 		if err := validate(string(link.Name), link); err != nil {
 			return err
 		} else if len(lastName) > 0 && bytes.Compare(lastName, link.Name) > 0 {
-			return ErrNamesAreNotSorted
+			return errors.Errorf("symlink names must be lexicographically sorted: lastName = '%v', current = '%v'", string(lastName), string(link.Name))
 		}
 		lastName = link.Name
 	}

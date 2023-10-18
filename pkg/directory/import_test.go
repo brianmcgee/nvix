@@ -1,6 +1,7 @@
 package directory
 
 import (
+	"bytes"
 	"context"
 	"io"
 	"net"
@@ -79,6 +80,17 @@ func blobServer(s *server.Server, t test.TestingT) (*grpc.Server, net.Listener) 
 	return srv, lis
 }
 
+func TestDepthFirstIterator_Foo(t *testing.T) {
+
+	r := require.New(t)
+
+	//  /nix/store/04rp3r2n2gsv1zmk103lajzl5nfl2q1g-nerdfonts-3.0.1/share/fonts/opentype/NerdFonts/
+	// /nix/store/04rp3r2n2gsv1zmk103lajzl5nfl2q1g-nerdfonts-3.0.1/share/fonts/truetype/NerdFonts/
+
+	r.Equal(1, bytes.Compare([]byte("OverpassNerdFontPropo-ThinItalic.otf"), []byte("3270NerdFont-Condensed.ttf")))
+
+}
+
 func TestDepthFirstIterator_Canonical(t *testing.T) {
 	r := require.New(t)
 
@@ -138,7 +150,9 @@ func TestUploadFiles(t *testing.T) {
 		select {
 		case <-ctx.Done():
 			t.Fatal("ctx cancelled", "err", ctx.Err())
-		case digest := <-future.Get():
+		case result := <-future.Get():
+			digest, err := result.Unwrap()
+			r.Nil(err)
 			// todo generate a blake3 hash of the local file and compare
 			r.Len(digest, 32)
 		}
