@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"strings"
 
-	capb "code.tvl.fyi/tvix/castore/protos"
+	capb "code.tvl.fyi/tvix/castore-go"
 	"github.com/juju/errors"
 )
 

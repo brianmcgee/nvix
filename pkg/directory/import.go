@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	castorev1 "code.tvl.fyi/tvix/castore/protos"
+	castorev1 "code.tvl.fyi/tvix/castore-go"
 
 	"github.com/41north/async.go"
 	"github.com/charmbracelet/log"

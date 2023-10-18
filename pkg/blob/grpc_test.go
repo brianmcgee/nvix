@@ -12,7 +12,7 @@ import (
 
 	"github.com/brianmcgee/nvix/pkg/test"
 
-	pb "code.tvl.fyi/tvix/castore/protos"
+	pb "code.tvl.fyi/tvix/castore-go"
 
 	"github.com/charmbracelet/log"
 	"github.com/nats-io/nats-server/v2/server"

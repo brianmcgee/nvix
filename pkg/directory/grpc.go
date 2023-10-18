@@ -6,7 +6,7 @@ import (
 	"encoding/base64"
 	"io"
 
-	capb "code.tvl.fyi/tvix/castore/protos"
+	capb "code.tvl.fyi/tvix/castore-go"
 
 	"github.com/brianmcgee/nvix/pkg/store"
 	"github.com/charmbracelet/log"

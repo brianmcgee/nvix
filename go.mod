@@ -3,8 +3,8 @@ module github.com/brianmcgee/nvix
 go 1.20
 
 require (
-	code.tvl.fyi/tvix/castore/protos v0.0.0-20231014122118-3fc2ade7dfb2
-	code.tvl.fyi/tvix/store/protos v0.0.0-20231014142132-b2dfae6a1028
+	code.tvl.fyi/tvix/castore-go v0.0.0-20231017202545-96df348c772c
+	code.tvl.fyi/tvix/store-go v0.0.0-20231017203636-e5c25599293a
 	github.com/41north/async.go v0.0.0-20221002090159-6328d6a1e8ba
 	github.com/SaveTheRbtz/fastcdc-go v0.3.0
 	github.com/alecthomas/kong v0.8.1

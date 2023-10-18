@@ -6,7 +6,7 @@ import (
 	"io"
 	"testing"
 
-	pb "code.tvl.fyi/tvix/castore/protos"
+	pb "code.tvl.fyi/tvix/castore-go"
 
 	"github.com/charmbracelet/log"
 )

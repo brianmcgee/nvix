@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	pb "code.tvl.fyi/tvix/castore/protos"
+	pb "code.tvl.fyi/tvix/castore-go"
 
 	"github.com/brianmcgee/nvix/pkg/blob"
 	"github.com/brianmcgee/nvix/pkg/test"

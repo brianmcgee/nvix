@@ -10,7 +10,7 @@ import (
 
 	"github.com/brianmcgee/nvix/pkg/cli"
 
-	tvpb "code.tvl.fyi/tvix/store/protos"
+	tvpb "code.tvl.fyi/tvix/store-go"
 	"github.com/brianmcgee/nvix/pkg/pathinfo"
 
 	"github.com/brianmcgee/nvix/pkg/directory"
@@ -24,7 +24,7 @@ import (
 
 	"github.com/brianmcgee/nvix/pkg/blob"
 
-	pb "code.tvl.fyi/tvix/castore/protos"
+	pb "code.tvl.fyi/tvix/castore-go"
 	grpcprom "github.com/grpc-ecosystem/go-grpc-middleware/providers/prometheus"
 
 	"github.com/charmbracelet/log"

@@ -1,7 +1,7 @@
-code.tvl.fyi/tvix/castore/protos v0.0.0-20231014122118-3fc2ade7dfb2 h1:Z5GS8OUe7L/hKDbb1amArY7QgX0DSD5xaBwWxmh4H3Y=
-code.tvl.fyi/tvix/castore/protos v0.0.0-20231014122118-3fc2ade7dfb2/go.mod h1:hj0y8RPthqn1QPj8u2jFe2vzH7NouUoclrwo1/CSbuc=
-code.tvl.fyi/tvix/store/protos v0.0.0-20231014142132-b2dfae6a1028 h1:WBNA1OKC3JRW9dn8+YNSP1J5G+Bo3e3GTo23pi8dxO8=
-code.tvl.fyi/tvix/store/protos v0.0.0-20231014142132-b2dfae6a1028/go.mod h1:dgHQu5Swf/ImS6u6y9e+9SaUNJMWdFVhwS5iQxJ5NOM=
+code.tvl.fyi/tvix/castore-go v0.0.0-20231017202545-96df348c772c h1:NMxDhSYISwhTt3NoyYUnvDPQZTf5bnR9BoXAc1p2Ugg=
+code.tvl.fyi/tvix/castore-go v0.0.0-20231017202545-96df348c772c/go.mod h1:+vKbozsa04yy2TWh3kUVU568jaza3Hf0p1jAEoMoCwA=
+code.tvl.fyi/tvix/store-go v0.0.0-20231017203636-e5c25599293a h1:HyNz9WwYPgOsKcS4eawn7jLz2FM+aBjX+VMxd982A/A=
+code.tvl.fyi/tvix/store-go v0.0.0-20231017203636-e5c25599293a/go.mod h1:tqaK4m6wCj8d6ozy5zBXIQ8+sZtuxAf4GRob2B2cCiI=
 github.com/41north/async.go v0.0.0-20221002090159-6328d6a1e8ba h1:2MxT6HO1REtaXA73gufjJqWKZgK5NkDb9p6u/cxJ5Ms=
 github.com/41north/async.go v0.0.0-20221002090159-6328d6a1e8ba/go.mod h1:tJP3qKeQXBuvhdZiy0mmK2z22CI00v/N3O5osZ2fBAM=
 github.com/SaveTheRbtz/fastcdc-go v0.3.0 h1:JdHvLlnijDuisYIwpRDcHZEjbxvCqtEmJ3gf35VJBgA=

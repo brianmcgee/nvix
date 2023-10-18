@@ -3,10 +3,11 @@ package pathinfo
 import (
 	"bytes"
 	"context"
+	"github.com/nats-io/nats.go"
 	"io"
 
-	capb "code.tvl.fyi/tvix/castore/protos"
-	tvpb "code.tvl.fyi/tvix/store/protos"
+	capb "code.tvl.fyi/tvix/castore-go"
+	tvpb "code.tvl.fyi/tvix/store-go"
 
 	"github.com/brianmcgee/nvix/pkg/blob"
 	"github.com/brianmcgee/nvix/pkg/directory"
@@ -14,7 +15,6 @@ import (
 	"github.com/charmbracelet/log"
 	"github.com/golang/protobuf/proto"
 	multihash "github.com/multiformats/go-multihash/core"
-	"github.com/nats-io/nats.go"
 	"github.com/nix-community/go-nix/pkg/hash"
 	"github.com/nix-community/go-nix/pkg/nixbase32"
 	"google.golang.org/grpc/codes"
