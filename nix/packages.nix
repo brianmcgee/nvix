@@ -7,15 +7,19 @@
     lib,
     pkgs,
     self',
+    inputs',
     ...
   }: {
     packages = rec {
-      nvix = pkgs.buildGoModule rec {
+      nvix = inputs'.gomod2nix.legacyPackages.buildGoApplication rec {
         pname = "nvix";
         version = "0.0.1+dev";
 
+        # ensure we are using the same version of go to build with
+        inherit (pkgs) go;
+
         src = ../.;
-        vendorSha256 = "sha256-jusWy+SIzzSw0Ene6JuJTHkmyD/EZtAYlp8z93Mt2ls=";
+        modules = ../gomod2nix.toml;
 
         ldflags = [
           "-X 'build.Name=${pname}'"

@@ -11,6 +11,7 @@
   config.perSystem = {
     pkgs,
     config,
+    system,
     ...
   }: let
     inherit (pkgs.stdenv) isLinux isDarwin;
@@ -58,11 +59,11 @@
       commands = [
         {
           category = "development";
-          package = pkgs.enumer;
+          package = pkgs.evans;
         }
         {
           category = "development";
-          package = pkgs.evans;
+          package = inputs.gomod2nix.packages.${system}.default;
         }
       ];
     };

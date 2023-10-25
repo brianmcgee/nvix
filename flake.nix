@@ -33,6 +33,7 @@
       url = "github:edolstra/flake-compat";
       flake = false;
     };
+    gomod2nix.url = "github:nix-community/gomod2nix";
   };
 
   outputs = inputs @ {flake-parts, ...}:
